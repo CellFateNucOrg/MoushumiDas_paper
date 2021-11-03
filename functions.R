@@ -73,12 +73,16 @@ filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
 getSignificantGenes<-function(resultsTable, padj=0.05, lfc=0, namePadjCol="padj",
                               nameLfcCol="log2FoldChange", direction="both",
                               chr="all", nameChrCol="chr", outPath="."){
+  #remove rows with padj NA value
+  idx<-is.na(resultsTable[,namePadjCol])
+  resultsTable<-resultsTable[!idx,]
+  # do filtering
   if(direction=="both") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & abs(resultsTable[,nameLfcCol])>lfc
   } else if(direction=="gt") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]>lfc
   } else if(direction=="lt") {
-    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol] < -lfc
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]<lfc
   } else {
     print("direction must be 'both' to get both tails, \n'gt' to get lfc larger than a specific value, \nor 'lt' to get lfc less than a certain value")
   }
@@ -382,3 +386,89 @@ getDensity1<-function(res, pval=0.05,
   return(list(groupCounts,sig))
 }
 
+
+
+
+#' Calculate number of significant genes by chormosome
+#'
+#' @param res DESeq2 results table
+#' @param pval Adjusted p value threshold to use
+#' @param lfc Log2 fold change threshold to use
+#' @return A table of the number of significant genes by chromosome
+#' @export
+summaryByChr<-function(resLFC,padj,lfc) {
+  up<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange > lfc,]
+  down<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange < -lfc, ]
+  allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
+  allChr$autosomes<-rowSums(allChr[,1:5])
+  allChr$total<-rowSums(allChr[,1:6])
+  rownames(allChr)<-paste0(rownames(allChr),"_p",padj,"_lfc",lfc)
+  return(allChr)
+}
+
+
+
+#' Plot average signal around motifs in particular sized bins
+#'
+#' @param motif_gr GRanges object for motifs of interest
+#' @param bwFiles List of bwFiles whose signal you want to average
+#' @winSize Size of the windows on which to avrage (in bp)
+#' @numWins Number of windows either side of the motif to look at
+#' @return ggplot2 object
+#' @export
+avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
+  avrbins<-list()
+  for (b in 1:length(bwFiles)){
+    gr<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
+    bwdata<-rtracklayer::import.bw(bwFiles[[b]])
+    cov<-GenomicRanges::coverage(bwdata,weight="score")
+    gr<-GenomicRanges::binnedAverage(gr,cov,paste0(names(bwFiles)[b],"__win",0))
+    #gr$numGenes<-countOverlaps(gr,bwdata)
+    # #extract group name to count genes per window
+    # grp<-gsub(paste0(".*\\/",fileNamePrefix),"",bwFiles[[b]])
+    # grp<-gsub("_lfc\\.bw","",grp)
+    # salmon<-GRanges(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+    #                                      contrastNames[[grp]],
+    #                                "_DESeq2_fullResults_p",padjVal,".rds")))
+    # gr$expressedGenesInBin<-countOverlaps(gr,salmon[!is.na(salmon$padj)],ignore.strand=T,type="any")
+    upstream<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
+    downstream<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
+    for(i in 1:numWins){
+      print(i)
+      upstream<-GenomicRanges::flank(upstream,width=winSize,start=T)
+      upstream<-GenomicRanges::binnedAverage(upstream,cov,paste0(names(bwFiles)[b],"__win-",i))
+      #upstream$expressedGenesInBin<-countOverlaps(upstream,salmon[!is.na(salmon$padj)],ignore.strand=T,type="any")
+      downstream<-GenomicRanges::flank(downstream,width=winSize,start=F)
+      downstream<-GenomicRanges::binnedAverage(downstream,cov,paste0(names(bwFiles)[b],"__win",i))
+      #downstream$expressedGenesInBin<-countOverlaps(downstream,salmon[!is.na(salmon$padj)],ignore.strand=T,type="any")
+      df<-cbind(data.frame(gr),mcols(upstream),mcols(downstream))
+      df<-tidyr::pivot_longer(df,cols=colnames(df)[grep("__win",colnames(df))],names_to="window")
+      df$SMC<-do.call(rbind,strsplit(df$window,split="__win"))[,1]
+      df$window<-as.numeric(do.call(rbind,strsplit(df$window,split="__win"))[,2])*winSize/1000
+      avrbins[[names(bwFiles)[b]]]<-df
+    }
+  }
+
+  allavrbins<-do.call(rbind,avrbins)
+  allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
+  p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) +
+    ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
+    ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
+    ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
+    ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
+    ggplot2::theme_bw()+
+    ggplot2::ylab("Average score per bin") +
+    ggplot2::xlab("Relative distance (kb)")
+  #qc plots to be sure number of genes is not strongly different in bins
+  # p1<-ggplot2::ggplot(allavrbins[allavrbins$SMC=="dpy26",],
+  #                     ggplot2::aes(x=window,y=expressedGenesInBin,
+  #                                             col=value)) +
+  #   ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
+  #   ggplot2::geom_jitter()
+  # p2<-ggplot2::ggplot(allavrbins[allavrbins$SMC=="dpy26",],
+  #                     ggplot2::aes(x=expressedGenesInBin,y=value,
+  #                                  col=window)) +
+  #   ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
+  #   ggplot2::geom_jitter()
+  return(p)
+}

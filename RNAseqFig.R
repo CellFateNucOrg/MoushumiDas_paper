@@ -7,12 +7,20 @@ if(!dir.exists(paste0(workDir,"/plots"))) {
   dir.create(paste0(workDir,"/plots"))
 }
 
-strains<-c("366","382","775","784")
+contrastsOI<-c("X.wt.wt.0mM_dpy26cs_vs_wt","X.wt.wt.0mM_kle2cs_vs_wt",
+               "X.wt.wt.0mM_scc16cs_vs_wt","X.wt.wt.0mM_coh1cs_vs_wt",
+               "X.wt.wt.0mM_scc1coh1cs_vs_wt")
+useContrasts<-c("dpy26","kle2","scc1","coh1","scc1coh1")
+names(contrastsOI)<-useContrasts
+strains<-c("366","382","775","784","828","844")
 strain<-factor(strains,levels=strains)
 SMC<-strain
-levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
+levels(SMC)<-c("TEVonly",useContrasts)
+
 controlGrp<-levels(SMC)[1] # control group
 groupsOI<-levels(SMC)[-1]
+
+
 
 source(paste0(workDir,"/functions.R"))
 
@@ -22,16 +30,16 @@ source(paste0(workDir,"/functions.R"))
 ###################-
 lfcVal=0.5
 padjVal=0.05
-filterPrefix<-"prefiltCyc2xChrAX"
-fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/",filterPrefix,"_")
+filterPrefix<-"filtCycChrAX"
+fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefix,"_")
 outPath=paste0(workDir,"/",filterPrefix)
 
 ## up regulated count
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
                                                                       padj=padjVal, lfc=lfcVal,
                                                                       namePadjCol="padj",
                                                                       nameLfcCol="log2FoldChange",
@@ -53,7 +61,7 @@ sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(
     salmon, padj=padjVal,
     lfc= lfcVal,
     namePadjCol="padj",
@@ -124,7 +132,7 @@ eulerLabelsType=c("counts")
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                                                       namePadjCol="padj",
                                                                       nameLfcCol="log2FoldChange",
                                                                       direction="both",
