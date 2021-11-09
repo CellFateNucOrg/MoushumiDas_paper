@@ -228,6 +228,52 @@ p2<-gridExtra::arrangeGrob(p2a,p2b,p2c,p2d,layout_matrix=lay)
 
 ##cowplot::plot_grid(p2a,p2b,p2c,p2d,align="hv",nrow=2,ncol=2)
 
+##########-
+# heirarchical clustering of all LFC -------------
+##########-
+
+geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+
+lfcCols<-grep("lfc",colnames(geneTable))
+colnames(geneTable)<-gsub("_lfc$","",colnames(geneTable))
+
+#annClrs<-brewer.pal(length(useContrasts), name="Dark2")
+#names(annClrs)<-useContrasts
+#colClrs<-factor(colnames(geneTable)[lfcCols])
+#levels(colClrs)<-annClrs[levels(colClrs)]
+
+heatmapCol<-colorRampPalette(c("cyan","black","pink"))(20)
+# Perform the hierarchical clustering with
+# A distance based on Pearson-correlation coefficient
+# and average linkage clustering as agglomeration criteria
+heatmap.2(as.matrix(geneTable[,lfcCols]),
+          scale="row",
+          hclust=function(x) stats::hclust(x,method="average"),
+          distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+          margin=c(6,0),
+          trace="none",
+          density="none",
+          col=heatmapCol,
+          labRow="",
+          #labCol = names(countTable.kept),
+          cexCol=1,
+          main=paste0("LFC of all genes (n=",nrow(geneTable),")"),
+          #ColSideColors=as.vector(colClrs),
+          #colCol=as.vector(colClrs)
+)
+
+
+
 
 ##################-
 ## Correlation------
