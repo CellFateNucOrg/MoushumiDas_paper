@@ -22,18 +22,18 @@ prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^cs),list(x="kle-2")),
                substitute(italic(x^cs),list(x="scc-1")),
                substitute(italic(x^cs),list(x="coh-1")),
-               substitute(italic(x^cs~y^cs,list(x="scc-1",y="coh-1"))))
-
+               substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
+#plot(1:100,main=prettyNames[[5]])
 
 names(contrastsOI)<-useContrasts
-strains<-c("366","382","775","784","828","844")
-strain<-factor(strains,levels=strains)
-SMC<-strain
-levels(SMC)<-c("TEVonly",useContrasts)
-
-controlGrp<-levels(SMC)[1] # control group
-groupsOI<-levels(SMC)[-1]
-
+# strains<-c("366","382","775","784","828","844")
+# strain<-factor(strains,levels=strains)
+# SMC<-strain
+# levels(SMC)<-c("TEVonly",useContrasts)
+#
+# controlGrp<-levels(SMC)[1] # control group
+# groupsOI<-levels(SMC)[-1]
+groupsOI<-useContrasts
 
 
 source(paste0(workDir,"/functions.R"))
@@ -97,7 +97,7 @@ downPerChr$genes<-downPerChr$genes*(-1)
 # combine up and down
 sigPerChr<-rbind(upPerChr,downPerChr)
 sigPerChr$direction<-factor(sigPerChr$direction,levels=c("up","down"))
-sigPerChr$SMC<- factor(sigPerChr$SMC,labels=prettyNames)
+sigPerChr$SMC<- factor(sigPerChr$SMC,levels=groupsOI,labels=prettyNames)
 
 
 base.plot <- function(data) {
@@ -224,7 +224,7 @@ hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",col=h
              show_row_names=F,row_title="chrX",column_names_rot = 45)
 htlist=hm1 %v% hm2
 ph1<-grid::grid.grabExpr(draw(htlist))
-pdf(file=paste0(workDir,"/plots/hclustering.pdf"),width=5,height=8,
+pdf(file=paste0(workDir,"/plots/hclustering_TEV.pdf"),width=5,height=8,
     paper="a4")
 draw(htlist)
 dev.off()
