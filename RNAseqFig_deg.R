@@ -28,9 +28,9 @@ contrastsOI<-c("wt.TIR1.sdc3deg.X_1mM_vs_0mM",
                "X.wt.wt.0mM_dpy26cs_vs_wt","X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt")
 useContrasts<-c("aux_sdc3bg","dpy26","sdc3dpy26")
 
-prettyNames<-c(substitute(italic(x^AID+-IAA),list(x="sdc-3")),
+prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
                substitute(italic(x^cs),list(x="dpy-26")),
-               substitute(italic(+-x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
+               substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
 
 #plot(1:100,main=prettyNames[[5]])
 
@@ -55,7 +55,7 @@ fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefi
 outPath=paste0(workDir)
 
 ###################-
-# panel A numbers of genes per chr-------
+# LFC per chr-------
 ###################-
 ## all genes
 sigTables<-list()

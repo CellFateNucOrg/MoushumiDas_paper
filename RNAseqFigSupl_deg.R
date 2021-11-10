@@ -13,16 +13,14 @@ if(!dir.exists(paste0(workDir,"/plots"))) {
 }
 
 
-contrastsOI<-c("X.wt.wt.0mM_dpy26cs_vs_wt","X.wt.wt.0mM_kle2cs_vs_wt",
-               "X.wt.wt.0mM_scc16cs_vs_wt","X.wt.wt.0mM_coh1cs_vs_wt",
-               "X.wt.wt.0mM_scc1coh1cs_vs_wt")
-useContrasts<-c("dpy26","kle2","scc1","coh1","scc1coh1")
+contrastsOI<-c("wt.TIR1.sdc3deg.X_1mM_vs_0mM",
+               "X.wt.wt.0mM_dpy26cs_vs_wt","X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt")
+useContrasts<-c("aux_sdc3bg","dpy26","sdc3dpy26")
 
-prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
-               substitute(italic(x^cs),list(x="kle-2")),
-               substitute(italic(x^cs),list(x="scc-1")),
-               substitute(italic(x^cs),list(x="coh-1")),
-               substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
+prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
+               substitute(italic(x^cs),list(x="dpy-26")),
+               substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
+
 
 names(contrastsOI)<-useContrasts
 # strains<-c("366","382","775","784","828","844")
@@ -138,36 +136,106 @@ df <- tibble(x = rep(1.5, 2),
 p1<-p1 + geom_table(data = df, aes(x = x, y = y,label = tbl),parse=T,
                 table.theme = ttheme_gtlight)
 
-p1
+#p1
 
 
 
 ##################-
-## boxplot of LFC------
+## boxplot of counts per chr------
 ##################-
+
+
+## up regulated count
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[grp]]<-as.data.frame(salmon)
-  sigTables[[grp]]$SMC<-grp
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
+                                                      padj=padjVal, lfc=lfcVal,
+                                                      namePadjCol="padj",
+                                                      nameLfcCol="log2FoldChange",
+                                                      direction="gt",
+                                                      chr="all",
+                                                      nameChrCol="chr"))
 }
 
 
-allSig<-do.call(rbind,sigTables)
-rownames(allSig)<-NULL
-allSig$chr<-gsub("chr","",allSig$chr)
-allSig$SMC<- factor(allSig$SMC,levels=groupsOI,labels=prettyNames)
+upPerChr<-lapply(sigTables, "[", ,"chr")
+upPerChr<-as.data.frame(do.call(rbind,lapply(upPerChr,table)))
+upPerChr$SMC<-rownames(upPerChr)
+upPerChr<-upPerChr %>% gather(colnames(upPerChr)[1:6],key=chr, value=genes)
+upPerChr$chr<-gsub("chr","",upPerChr$chr)
+upPerChr$direction<-"up"
+
+## down regulated count
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(
+    salmon, padj=padjVal,
+    lfc= -lfcVal,
+    namePadjCol="padj",
+    nameLfcCol="log2FoldChange",
+    direction="lt",
+    chr="all",
+    nameChrCol="chr"))
+}
+
+downPerChr<-lapply(sigTables, "[", ,"chr")
+downPerChr<-as.data.frame(do.call(rbind,lapply(downPerChr,table)))
+downPerChr$SMC<-rownames(downPerChr)
+downPerChr<-downPerChr %>% gather(colnames(downPerChr)[1:6],key=chr, value=genes)
+downPerChr$chr<-gsub("chr","",downPerChr$chr)
+downPerChr$direction<-"down"
+
+downPerChr$genes<-downPerChr$genes*(-1)
+
+# combine up and down
+sigPerChr<-rbind(upPerChr,downPerChr)
+sigPerChr$direction<-factor(sigPerChr$direction,levels=c("up","down"))
+sigPerChr$SMC<- factor(sigPerChr$SMC,levels=groupsOI,labels=prettyNames)
 
 
-p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
-  geom_boxplot(outlier.shape=NA) +
-  facet_grid(cols=vars(SMC),labeller=label_parsed) + theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())+
-  ylim(c(-0.5,1)) + scale_fill_grey(start=0.8, end=0.4)+
-  geom_hline(yintercept=0,linetype="dotted",col="grey40")+
-  xlab("Chromosome") +ylab("Log2(Fold Change)")
+base.plot <- function(data) {
+  p <- ggplot(data, aes(x=chr, y=genes, group=SMC)) + facet_grid(cols=vars(SMC))
+  p <- p + theme_bw()
+  p <- p + theme(legend.position="bottom", panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank(),)
+  p <- p + geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
+                    show.legend = FALSE)
+  p <- p + scale_fill_grey(start=0.8, end=0.4)
+  p <- p + xlab("Chromosome") + ylab("Number of genes")
+  return(p)
+}
+
+# inspired by: https://www.j4s8.de/post/2018-01-15-broken-axis-with-ggplot2/
+maxIdx<-which.max(abs(sigPerChr$genes))
+bigMax<-sigPerChr$genes[maxIdx]*1.2
+bigMin<-sigPerChr$genes[maxIdx]*0.8
+smallMax<-max(abs(sigPerChr$genes[-maxIdx]))*1.1
+
+step<-150
+breaks<-seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step)
+labels<-abs(seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step))
+
+
+p2  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
+  facet_grid(direction~SMC,scales="free",space="free",
+             labeller=label_parsed) + theme_bw() +
+  theme(legend.position="bottom", panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), strip.text = element_text(size = 12),
+        #strip.text.x=element_text(face="italic"),
+        axis.text=element_text(size=12), axis.title=element_text(size=12)) +
+  geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
+           show.legend = FALSE) + scale_fill_grey(start=0.8, end=0.4) +
+  xlab("Chromosome") + ylab("Number of genes") +
+  scale_y_continuous(breaks=breaks,labels=labels,
+                     expand = expansion(add = c(70, 70))) +
+  geom_text(aes(label=abs(genes)),
+            vjust=ifelse(sign(sigPerChr$genes)>0,-0.2,1.2), color="black",
+            position = position_dodge(0.9), size=3)
+
 
 ##################-
 ## boxplot LFC up/down significant------
@@ -242,39 +310,22 @@ for (grp in groupsOI){
 
 plotTitle<-list(label="Autosomal up",fontsize=8)
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-subset1<-achr[c("dpy26","kle2","scc1")]
-sigGenes<-lapply(subset1, "[[","wormbaseID")
+sigGenes<-lapply(achr, "[[","wormbaseID")
 numGenes["Aup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3a<-plot(fit, quantities=list(type=eulerLabelsType),
           main=plotTitle)
 #print(p3a)
 
-subset2<-achr[c("scc1","coh1","scc1coh1")]
-sigGenes<-lapply(subset2, "[[","wormbaseID")
-numGenes["Aup"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3b<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3b)
 
 plotTitle<-list(label="chrX up",fontsize=8)
 xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-subset1<-xchr[c("dpy26","kle2","scc1")]
-sigGenes<-lapply(subset1,"[[","wormbaseID")
+sigGenes<-lapply(xchr,"[[","wormbaseID")
 numGenes["Xup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3c<-plot(fit, quantities=list(type=eulerLabelsType),
          main=plotTitle)
 #print(p3c)
-
-subset2<-xchr[c("scc1","coh1","scc1coh1")]
-sigGenes<-lapply(subset2,"[[","wormbaseID")
-numGenes["Xup"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3d<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3d)
 
 
 ## downregulated genes -----
@@ -292,42 +343,24 @@ for (grp in groupsOI){
 
 plotTitle<-list(label="Autosomal down",fontsize=8)
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-subset1<-achr[c("dpy26","kle2","scc1")]
-sigGenes<-lapply(subset1, "[[","wormbaseID")
+sigGenes<-lapply(achr, "[[","wormbaseID")
 numGenes["Adown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3e<-plot(fit, quantities=list(type=eulerLabelsType),
           main=plotTitle)
 #print(p3e)
 
-subset2<-achr[c("scc1","coh1","scc1coh1")]
-sigGenes<-lapply(subset2, "[[","wormbaseID")
-numGenes["Adown"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3f<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3f)
-
 
 plotTitle<-list(label="chrX down",fontsize=8)
 xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-subset1<-xchr[c("dpy26","kle2","scc1")]
-sigGenes<-lapply(subset1, "[[","wormbaseID")
+sigGenes<-lapply(xchr, "[[","wormbaseID")
 numGenes["Xdown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3g<-plot(fit, quantities=list(type=eulerLabelsType),
           main=plotTitle)
 #print(p3g)
 
-subset2<-xchr[c("scc1","coh1","scc1coh1")]
-sigGenes<-lapply(subset2, "[[","wormbaseID")
-numGenes["Xdown"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3h<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3h)
-
-p3<-ggarrange(p3a,p3c,p3b,p3d,p3e,p3g,p3f,p3h,ncol=4,nrow=2)
+p3<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
 
 
 
@@ -377,23 +410,7 @@ for (i in 1:ncol(combnTable)){
 }
 
 
-firstContrasts<-contrastNm[1:floor(length(contrastNm)/2)]
-df<-allContrasts[allContrasts$contrast %in% firstContrasts,]
-p4a<-ggplot(df,aes(x=group1,y=group2)) +
-  facet_grid(cols=vars(XvA),rows=vars(contrast)) +
-  geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
-  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        axis.text=element_text(size=12), axis.title=element_text(size=12),
-        strip.text = element_text(size = 12)) +
-  geom_hline(yintercept=0,lty=3,col="grey70",) +
-  geom_vline(xintercept=0,lty=3,col="grey70") +
-  ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
-
-
-p4b<-ggplot(allContrasts[!(allContrasts$contrast %in% firstContrasts),],aes(x=group1,y=group2)) +
+p4a<-ggplot(allContrasts,aes(x=group1,y=group2)) +
   facet_grid(cols=vars(XvA),rows=vars(contrast)) +
   geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
@@ -420,7 +437,7 @@ for (grp in groupsOI){
   plotList[[grp]]<-p+ggtitle(label=prettyNames[[which(groupsOI==grp)]])
 }
 
-p5<-ggarrange(plotlist=plotList,ncol=2,nrow=3)
+p5<-ggarrange(plotlist=plotList,ncol=2,nrow=2)
 
 
 ###################-
@@ -481,16 +498,17 @@ p6b<-ggplot(pergrp,aes(x=compartment,y=fraction,fill=updown)) +
 
 
 ############### Final assembly #########
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p1,device="pdf",width=8,height=6)
+p<-ggarrange(p1,p2,nrow=2,heights=c(2.5,1),labels=c("A.","B."))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device="pdf",width=8,height=11)
 
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p5,device="pdf",width=8,height=11)
+p<-ggarrange(p5,p2a,nrow=2,heights=c(3,1),labels=c("A.","B."))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg2.pdf"),p,device="pdf",width=8,height=11)
 
-p<-ggarrange(p2,p2a,p3,nrow=3,heights=c(1.5,1.5,3),labels=c("A.","B.","C."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.pdf"),p,device="pdf",width=8,height=11)
+p<-ggarrange(p3,p4a,nrow=2,heights=c(1,1.5),labels=c("A.","B."))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg3.pdf"),p,device="pdf",width=8,height=11)
 
-p<-ggarrange(p4a,p4b,ncol=2)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV4.pdf"),p,device="pdf",width=11,height=8)
+p<-ggarrange(p6a,p6b,nrow=2,heights=c(1,1),labels=c("A.","B."))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg4.pdf"),p,device="pdf",width=8,height=6)
 
-p<-ggarrange(p6a,p6b,nrow=2)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV5.pdf"),p,device="pdf",width=8,height=11)
+
 
