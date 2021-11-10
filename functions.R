@@ -472,3 +472,64 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
   #   ggplot2::geom_jitter()
   return(p)
 }
+
+
+
+#' Enhanced volcano plot highlighting X chr genes
+#'
+#' @param resLFC results object from DESeq2
+#' @param lfcVal  threshold Log2 fold change for significance (default=0.5)
+#' @param padj threshold adjust p value for significance (default=0.05)
+#' @return Volcano plot object
+#' @export
+plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05){
+  resLFC<-resLFC[!is.na(resLFC$padj),]
+  resByChr<-resLFC[order(resLFC$chr),]
+  # create custom key-value pairs for 'low', 'chrX', 'autosome' expression by fold-change
+  # set the base colour as 'black'
+  keyvals <- rep('black', nrow(resByChr))
+  # set the base name/label as 'NS'
+  names(keyvals) <- rep('NS', nrow(resByChr))
+
+  keyvals[which(resByChr$chr=="chrX")] <- 'red2'
+  names(keyvals)[which(resByChr$chr=="chrX")] <- 'chrX'
+  nonSigXchr<-which(resByChr$chr=="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<0.5))
+  keyvals[nonSigXchr]<-"#c3909b"
+  names(keyvals)[nonSigXchr]<-"X NS"
+
+  # modify keyvals for variables with fold change < -2.5
+  keyvals[which(resByChr$chr!="chrX")] <- 'royalblue'
+  names(keyvals)[which(resByChr$chr!="chrX")] <- 'Autosomes'
+  nonSigAchr<-which(resByChr$chr!="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<0.5))
+  keyvals[nonSigAchr]<-"#6b8ba4"
+  names(keyvals)[nonSigAchr]<-"A NS"
+
+  sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>lfcVal,na.rm=T)
+  sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -lfcVal,na.rm=T)
+  p<-EnhancedVolcano::EnhancedVolcano(resByChr,
+                                      lab=rownames(resByChr),
+                                      labSize=0.5,
+                                      labCol="#11111100",
+                                      x="log2FoldChange",y="padj",
+                                      selectLab=rownames(resByChr)[12366],
+                                      xlim=c(-5.5,5.5),
+                                      ylim=c(0,65),
+                                      title= NULL,
+                                      titleLabSize = 10,
+                                      subtitleLabSize = 8,
+                                      subtitle=paste0(sum(!is.na(resLFC$padj)), ' tested genes. ',sigUp, " up, ",sigDown," down."),
+                                      caption =NULL,
+                                      captionLabSize = 0,
+                                      pCutoff=padjVal,
+                                      FCcutoff=lfcVal,
+                                      xlab=bquote(~Log[2]~'FC'),
+                                      ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                                      legendPosition = 'bottom',
+                                      legendLabSize = 8,
+                                      legendIconSize = 3.0,
+                                      axisLabSize=8,
+                                      colCustom=keyvals,
+                                      colAlpha=0.5,
+                                      pointSize = 1.0)
+  return(p)
+}
