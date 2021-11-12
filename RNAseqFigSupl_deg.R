@@ -444,7 +444,7 @@ p5<-ggarrange(plotlist=plotList,ncol=2,nrow=2)
 ## AB compartments------
 ###################-
 
-pca2<-import.bw(paste0(outPath,"/N2_5000b_laminDamID_pca2.bw"))
+pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
 
 listgr<-NULL
 for (grp in groupsOI){

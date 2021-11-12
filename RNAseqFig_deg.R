@@ -7,6 +7,7 @@ library(ComplexHeatmap)
 library(circlize)
 library(fastcluster)
 library(seriation)
+library(rtracklayer)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -77,7 +78,8 @@ p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
   geom_boxplot(outlier.shape=NA) +
   facet_grid(cols=vars(SMC),labeller=label_parsed) + theme_bw() +
   theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())+
+        panel.grid.minor = element_blank(),
+        legend.position="none")+
   ylim(c(-0.5,1)) + scale_fill_grey(start=0.8, end=0.4)+
   geom_hline(yintercept=0,linetype="dotted",col="grey40")+
   xlab("Chromosome") +ylab("Log2(Fold Change)")
@@ -208,12 +210,14 @@ contrastNames<-c()
 for(i in c(1:3)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
+  prettyGrp1<-prettyNames[[combnTable[1,i]]]
+  prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  Rval<-cor(df[,1],df[,2])
-  df$contrast<-paste(prettyGeneName(grp1),"v",prettyGeneName(grp2))
-  contrastNames<-c(contrastNames,paste(prettyGeneName(grp1),"v",prettyGeneName(grp2)))
-  df$Rval<-Rval
+  #Rval<-cor(df[,1],df[,2])
+  df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  contrastNames<-c(contrastNames,df$contrast[1])
+  #df$Rval<-Rval
   if(is.null(allContrasts)){
     allContrasts<-df
   } else {
@@ -225,7 +229,7 @@ for(i in c(1:3)){
 allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames)
 p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   #facet_grid(cols=vars(contrast)) +
-  facet_wrap(vars(contrast),nrow=2)+
+  facet_wrap(vars(contrast),nrow=2,labeller=label_parsed)+
   geom_point(size=1,alpha=0.4) +
   #xlab(prettyGeneName(grp1)) +
   #ylab(prettyGeneName(grp2)) +
@@ -237,15 +241,159 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
+                   cor.coef.name = c("R"), output.type = "text") +
+  xlab(label=element_blank()) + ylab(label=element_blank())
+p3
+
+#################-
+## Anchors ---------
+#################-
+mustacheBatch="PMW366"
+#mustacheBatch="PMW382"
+
+loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
+grl<-zipup(loops)
+anchor1<-do.call(c,lapply(grl,"[",1))
+anchor2<-do.call(c,lapply(grl,"[",2))
+mcols(anchor1)<-mcols(loops)
+mcols(anchor2)<-mcols(loops)
+
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
+
+#separate anchors from inside tads
+tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+# tads_in<-reduce(tads_in)
+tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+anchors<-sort(c(anchor1,anchor2))
+anchors<-resize(anchors,width=20000,fix="center")
+#anchors<-reduce(anchors)
+#ol<-findOverlaps(anchors,tads_in)
+#anchors<-anchors[-queryHits(ol)]
+
+width(anchors)
+dataList<-list()
+plotList<-list()
+#grp=useContrasts[3]
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+  salmongr<-sort(salmongr)
+  ol<-findOverlaps(salmongr,tads_in,type="within")
+  insideTads<-salmongr[queryHits(ol)]
+  ol<-findOverlaps(salmongr,anchors)
+  atAnchors<-salmongr[queryHits(ol)]
+  insideTads$Loops<-"inLoop"
+  atAnchors$Loops<-"Anchor"
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+  df$SMC<-grp
+  dataList[[grp]]<-df
+}
+
+## focus on chrX loops
+dataTbl<-do.call(rbind,dataList)
+xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+
+xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
+p4a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+
+  geom_hline(yintercept=0,linetype="dotted",color="grey20") +
+  theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
+  xlab(label=element_blank()) + ggtitle("TEVonly loops") + ylab("log2(Fold Change)")
+
+xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
+xchr$measure="Expr"
+p4b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+  facet_wrap(.~measure) +
+  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
+  xlab(label=element_blank()) + ggtitle("") + ylab("log2(Base Mean Counts)")
+
+p4<-ggarrange(p4b,p4a,ncol=2,widths=c(1,3.5))
+
+#mustacheBatch="PMW366"
+mustacheBatch="PMW382"
+
+loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
+grl<-zipup(loops)
+anchor1<-do.call(c,lapply(grl,"[",1))
+anchor2<-do.call(c,lapply(grl,"[",2))
+mcols(anchor1)<-mcols(loops)
+mcols(anchor2)<-mcols(loops)
+
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
+
+#separate anchors from inside tads
+tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+# tads_in<-reduce(tads_in)
+tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+anchors<-sort(c(anchor1,anchor2))
+anchors<-resize(anchors,width=20000,fix="center")
+#anchors<-reduce(anchors)
+#ol<-findOverlaps(anchors,tads_in)
+#anchors<-anchors[-queryHits(ol)]
+
+width(anchors)
+dataList<-list()
+plotList<-list()
+#grp=useContrasts[3]
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+  salmongr<-sort(salmongr)
+  ol<-findOverlaps(salmongr,tads_in,type="within")
+  insideTads<-salmongr[queryHits(ol)]
+  ol<-findOverlaps(salmongr,anchors)
+  atAnchors<-salmongr[queryHits(ol)]
+  insideTads$Loops<-"inLoop"
+  atAnchors$Loops<-"Anchor"
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+  df$SMC<-grp
+  dataList[[grp]]<-df
+}
+
+## focus on chrX loops
+dataTbl<-do.call(rbind,dataList)
+xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+
+xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
+p5a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+
+  geom_hline(yintercept=0,linetype="dotted",color="grey20") +
+  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1))+
+  xlab(label=element_blank()) + ylab("log2(Fold Change)")+
+  ggtitle(expression(paste(italic("dpy-26"^cs),"loops")))
+
+xchr$measure="Expr"
+p5b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops)) +
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+  facet_wrap(.~measure) +
+  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
+  xlab(label=element_blank()) + ggtitle("") +ylab("log2(Base Mean Counts)")
+
+p5<-ggarrange(p5b,p5a,ncol=2,widths=c(1,3.5))
+
 
 
 #p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
-p<-ggarrange(ggarrange(p1,p2,ncol=2,widths=c(3,1),labels=c("A.","B.")),
-              ggarrange(ph1,p3,nrow=1,ncol=2,labels=c("C.","D."),widths=c(1,2)),
-             nrow=2,heights=c(3,5))
+p<-ggarrange(ggarrange(ggarrange(p1,p2,ncol=2,widths=c(3,1),labels=c("A.","B.")),
+                      ggarrange(ph1,p3,nrow=1,ncol=2,labels=c("C.","D."),widths=c(1,2)),
+             nrow=2,heights=c(3,5)),
+             ggarrange(p4,p5,nrow=2,labels=c("E.","F."),heights=c(1,1)),
+      ncol=2,widths=c(5,3))
 
 
 # p<-ggarrange(p1,
@@ -253,7 +401,7 @@ p<-ggarrange(ggarrange(p1,p2,ncol=2,widths=c(3,1),labels=c("A.","B.")),
 #                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
 #              nrow=2,labels=c("A."),heights=c(4,4))
 
-ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=8,height=10)
+ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=11,height=8)
 
 
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
