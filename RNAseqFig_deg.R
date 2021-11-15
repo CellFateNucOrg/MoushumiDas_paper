@@ -8,6 +8,7 @@ library(circlize)
 library(fastcluster)
 library(seriation)
 library(rtracklayer)
+library(gridtext)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -32,6 +33,9 @@ useContrasts<-c("aux_sdc3bg","dpy26","sdc3dpy26")
 prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
                substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
+
+prettyNames1<-c("sdc-3^AID","dpy-26^cs","sdc-3^(AID)dpy-26^(cs)")
+
 
 #plot(1:100,main=prettyNames[[5]])
 
@@ -102,15 +106,36 @@ for (grp in groupsOI){
 
 subset1<-sigTables[c("aux_sdc3bg","dpy26","sdc3dpy26")]
 sigGenes<-lapply(subset1,"[[","wormbaseID")
+# names(sigGenes)<-list(expression(sdc-3^AID),
+#                       expression(dpy-26^cs),
+#                       expression(sdc-3^AID*dpy-26^cs))
+uglyNames<-c("sdc-3AID","dpy26cs","sdc3AIDdpy-26cs")
+names(sigGenes)<-uglyNames
 fit<-euler(sigGenes)
-p2<-plot(fit, quantities=list(type=eulerLabelsType))#,
+p2<-plot(fit, quantities=list(type=eulerLabelsType),
+         labels=list(font=4))
+p2
+# for(i in seq(1,2*length(prettyNames),by=2)){
+#   i=1
+#   gg <- getGrob(p2, paste0("tag.label.",i))
+#   gg[[1]]<-substitute(x,list(x=prettyNames[[1]]))
+#   gg[[2]]<-substitute(x,list(x=prettyNames[[2]]))
+#   gg[[3]]<-substitute(x,list(x=prettyNames[[3]]))
+#   setGrob(p2, paste0("tag.label.",1), gg)
+# }
+# p3
+# draw(p2)
+
+#,
 #         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
 #                                paste(lapply(row.names(fit$ellipses), function(x){
 #                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
 #                                }), collapse="  ")), fontsize=8))
 
 p2
-print(p2)
+
+print(p2
+      )
 
 
 
@@ -151,14 +176,21 @@ heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("cyan","black","yellow"))
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]), method = "PCA")
 hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
              row_order = get_order(o1,1), column_order=1:length(useContrasts),
-             show_row_names=F,row_title="Autosomes",column_names_rot = 45)
+             show_row_names=F,row_title="Autosomes",column_names_rot = 90,
+             heatmap_width = unit(0.7, "npc"))
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), method = "PCA")
 hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",
-             col=heatmapCol, #column_labels=,
+             col=heatmapCol,
+             column_labels=gt_render(prettyNames1,
+                                     gp=gpar(fontface="italic",fontsize=10)),
              row_order = get_order(o1,1),  column_order=1:length(useContrasts),
-             show_row_names=F,row_title="chrX",column_names_rot = 45)
+             show_row_names=F,row_title="chrX",column_names_rot = 90,
+             heatmap_width = unit(0.7, "npc"),)
 htlist=hm1 %v% hm2
 ph1<-grid::grid.grabExpr(draw(htlist))
+
+draw(htlist)
+
 pdf(file=paste0(workDir,"/plots/hclustering_deg.pdf"),width=5,height=8,
     paper="a4")
 draw(htlist)
@@ -214,29 +246,23 @@ for(i in c(1:3)){
   prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  #Rval<-cor(df[,1],df[,2])
   df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
   contrastNames<-c(contrastNames,df$contrast[1])
-  #df$Rval<-Rval
   if(is.null(allContrasts)){
     allContrasts<-df
   } else {
     allContrasts<-rbind(allContrasts,df)
   }
 }
-#sigPerChr$SMC<- factor(sigPerChr$SMC,levels=useContrasts,labels=prettyNames)
 
-allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames)
+allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=contrastNames)
 p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
-  #facet_grid(cols=vars(contrast)) +
-  facet_wrap(vars(contrast),nrow=2,labeller=label_parsed)+
+  facet_wrap(.~contrast,nrow=2,labeller=label_parsed)+
   geom_point(size=1,alpha=0.4) +
-  #xlab(prettyGeneName(grp1)) +
-  #ylab(prettyGeneName(grp2)) +
   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 14) +
+  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        legend.position="bottom") +
+        legend.position="bottom", strip.text.x = element_text(size = 9)) +
   scale_color_manual(values=c("#111111","#FF1111"))+
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
@@ -301,20 +327,23 @@ xchr<-dataTbl[dataTbl$seqnames=="chrX",]
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 p4a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+
+  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+ theme_bw()+
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
-  theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1))+
-  xlab(label=element_blank()) + ggtitle("TEVonly loops") + ylab("log2(Fold Change)")
+  theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1),
+        plot.title = element_text(size = 10))+
+  xlab(label=element_blank()) +
+  ggtitle("TEVonly loops") + ylab("log2(Fold Change)")
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 xchr$measure="Expr"
 p4b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) +
-  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
+  facet_wrap(.~measure) +  theme_bw() +
+  theme(legend.position = "none", axis.text.x=element_text(angle=45,hjust=1),
+        plot.title = element_text(size = 10)) +
   xlab(label=element_blank()) + ggtitle("") + ylab("log2(Base Mean Counts)")
 
-p4<-ggarrange(p4b,p4a,ncol=2,widths=c(1,3.5))
+p4<-ggarrange(p4b,p4a,ncol=2,widths=c(1,4.1))
 
 #mustacheBatch="PMW366"
 mustacheBatch="PMW382"
@@ -368,21 +397,23 @@ xchr<-dataTbl[dataTbl$seqnames=="chrX",]
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 p5a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+ theme_bw()+
   facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
-  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1))+
+  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
+        plot.title = element_text(size = 10))+
   xlab(label=element_blank()) + ylab("log2(Fold Change)")+
-  ggtitle(expression(paste(italic("dpy-26"^cs),"loops")))
+  ggtitle(expression(paste(italic("dpy-26"^cs)," loops")))
 
 xchr$measure="Expr"
 p5b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops)) +
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) +
-  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
+  facet_wrap(.~measure) + theme_bw() +
+  theme(legend.position = "none", axis.text.x=element_text(angle=45,hjust=1),
+        plot.title = element_text(size = 10)) +
   xlab(label=element_blank()) + ggtitle("") +ylab("log2(Base Mean Counts)")
 
-p5<-ggarrange(p5b,p5a,ncol=2,widths=c(1,3.5))
+p5<-ggarrange(p5b,p5a,ncol=2,widths=c(1,4.1))
 
 
 
@@ -390,10 +421,10 @@ p5<-ggarrange(p5b,p5a,ncol=2,widths=c(1,3.5))
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
 p<-ggarrange(ggarrange(ggarrange(p1,p2,ncol=2,widths=c(3,1),labels=c("A.","B.")),
-                      ggarrange(ph1,p3,nrow=1,ncol=2,labels=c("C.","D."),widths=c(1,2)),
+                      ggarrange(ph1,p3,nrow=1,ncol=2,labels=c("C.","D."),widths=c(1.2,3)),
              nrow=2,heights=c(3,5)),
              ggarrange(p4,p5,nrow=2,labels=c("E.","F."),heights=c(1,1)),
-      ncol=2,widths=c(5,3))
+      ncol=2,widths=c(5,4.3))
 
 
 # p<-ggarrange(p1,
