@@ -496,7 +496,7 @@ plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05, addLegend=F){
   names(keyvals)[which(resByChr$chr=="chrX")] <- "chrX LFC>0.5"
   nonSigXchr<-which(resByChr$chr=="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<=0.5))
   keyvals[nonSigXchr]<-"#c3909b"
-  names(keyvals)[nonSigXchr]<-"chrX LFC\u226400.5"
+  names(keyvals)[nonSigXchr]<-"chrX LFC\u22640.5"
 
   # modify keyvals for variables with fold change < -2.5
   keyvals[which(resByChr$chr!="chrX")] <- 'royalblue'

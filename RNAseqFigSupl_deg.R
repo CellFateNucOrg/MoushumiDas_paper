@@ -6,6 +6,7 @@ library(lattice)
 library(rtracklayer)
 library(GenomicRanges)
 library(ggpubr)
+library(Cairo)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -220,13 +221,13 @@ breaks<-seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step)
 labels<-abs(seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step))
 
 
-p2  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
+p1  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
   facet_grid(direction~SMC,scales="free",space="free",
              labeller=label_parsed) + theme_bw() +
   theme(legend.position="bottom", panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), strip.text = element_text(size = 12),
+        panel.grid.minor = element_blank(), strip.text = element_text(size = 10),
         #strip.text.x=element_text(face="italic"),
-        axis.text=element_text(size=12), axis.title=element_text(size=12)) +
+        axis.text=element_text(size=10), axis.title=element_text(size=10)) +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
            show.legend = FALSE) + scale_fill_grey(start=0.8, end=0.4) +
   xlab("Chromosome") + ylab("Number of genes") +
@@ -237,58 +238,6 @@ p2  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
             position = position_dodge(0.9), size=3)
 
 
-# ##################-
-# ## boxplot LFC up/down significant------
-# ##################-
-# localLFCval<-0
-# sigTables<-list()
-# for (grp in useContrasts){
-#   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],
-#                          "_DESeq2_fullResults_p",padjVal,".rds"))
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   rownames(salmon)<-NULL
-#   sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
-#                                                       padj=padjVal, lfc=localLFCval,
-#                                                       namePadjCol="padj",
-#                                                       nameLfcCol="log2FoldChange",
-#                                                       direction="both",
-#                                                       chr="all", nameChrCol="chr"))
-# }
-#
-# # upregulated
-# sigList<-lapply(sigTables, getSignificantGenes,
-#                 padj=padjVal,lfc=localLFCval,direction="gt")
-#
-# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-# sigList<-do.call(rbind,sigList)
-# sigList$updown<-"up"
-# sigTbl<-sigList
-#
-#
-# # downregulated
-# sigList<-lapply(sigTables, getSignificantGenes,
-#                 padj= padjVal,lfc= -localLFCval,direction="lt")
-#
-# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-# sigList<-do.call(rbind,sigList)
-# sigList$updown<-"down"
-# sigTbl<-rbind(sigTbl,sigList)
-# sigTbl$chr<-as.factor(sigTbl$chr)
-# sigTbl$SMC<-factor(sigTbl$SMC, levels=groupsOI,labels=prettyNames)
-# sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-# rownames(sigTbl)<-NULL
-# sigTbl$XvA<-ifelse(sigTbl$chr=="chrX","chrX","Autosomes")
-#
-# yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-# p2a<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
-#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-#   facet_grid(cols=vars(XvA)) + ylim(yminmax) +
-#   ggtitle("Absolute LFC of significantly changed genes by chromosome type") +
-#   theme_minimal() + xlab("")+ ylab("|log2(FC)|")+
-#   scale_fill_brewer(palette="Dark2",labels = ggplot2:::parse_safe(levels(sigTbl$SMC)))
-
 ###################-
 ## volcano plots------
 ###################-
@@ -297,11 +246,12 @@ plotList<-list()
 geneTable<-NULL
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-  p<-plotVolcanoXvA(salmon)
+  p<-plotVolcanoXvA(salmon,addLegend=F)
   plotList[[grp]]<-p+ggtitle(label=prettyNames[[which(groupsOI==grp)]])
 }
 
-p5<-ggarrange(plotlist=plotList,ncol=2,nrow=2)
+plotList[["legend"]]<-plotVolcanoXvA(salmon,addLegend=T)
+p2<-ggarrange(plotlist=plotList,ncol=2,nrow=2)
 
 
 
@@ -337,33 +287,55 @@ contrastNm<-NULL
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
-
+  prettyGrp1<-prettyNames[[combnTable[1,i]]]
+  prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  df$contrast<-paste(grp1,"v",grp2)
+  df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  contrastNames<-c(contrastNames,df$contrast[1])
+  #df$contrast<-paste(grp1,"v",grp2)
   #df$Rval<-Rval
   if(is.null(allContrasts)){
     allContrasts<-df
-    contrastNm<-paste(grp1,"v",grp2)
+    #contrastNm<-paste(grp1,"v",grp2)
   } else {
     allContrasts<-rbind(allContrasts,df)
-    contrastNm<-c(contrastNm,paste(grp1,"v",grp2))
+    #contrastNm<-c(contrastNm,paste(grp1,"v",grp2))
   }
 }
 
-
-p4a<-ggplot(allContrasts,aes(x=group1,y=group2)) +
-  facet_grid(cols=vars(XvA),rows=vars(contrast)) +
-  geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
+allContrasts$XvA<-factor(allContrasts$XvA, levels=c("Autosomes","chrX"))
+allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=contrastNames)
+p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
+  facet_wrap(.~contrast,nrow=3,labeller=label_parsed)+
+  geom_point(size=1,alpha=0.4) +
   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
+  geom_smooth(method=lm,se=F,fullrange=T, size=0.7,show.legend = T) +
+  theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        axis.text=element_text(size=12), axis.title=element_text(size=12),
-        strip.text = element_text(size = 12)) +
+        legend.position="bottom", strip.text.x = element_text(size = 9),
+        legend.title=element_blank()) +
+  scale_color_manual(values=c("#111111","#FF1111"))+
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
+                   cor.coef.name = c("R"), output.type = "text",
+                   show.legend=F,size=3) +
+  xlab(label=element_blank()) + ylab(label=element_blank())
+#p3
+
+# p4a<-ggplot(allContrasts,aes(x=group1,y=group2)) +
+#   facet_grid(cols=vars(XvA),rows=vars(contrast)) +
+#   geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
+#   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+#   geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
+#   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
+#         axis.text=element_text(size=12), axis.title=element_text(size=12),
+#         strip.text = element_text(size = 12)) +
+#   geom_hline(yintercept=0,lty=3,col="grey70",) +
+#   geom_vline(xintercept=0,lty=3,col="grey70") +
+#   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
+#                    cor.coef.name = c("R"), output.type = "text")
 
 
 
@@ -437,7 +409,7 @@ p3g<-plot(fit, quantities=list(type=eulerLabelsType),
           main=plotTitle)
 #print(p3g)
 
-p3<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
+p4<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
 
 
 
@@ -499,17 +471,12 @@ p3<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
 
 
 ############### Final assembly #########
-p<-ggarrange(p1,p2,nrow=2,heights=c(2.5,1),labels=c("A.","B."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device="pdf",width=8,height=11)
 
-p<-ggarrange(p5,p2a,nrow=2,heights=c(3,1),labels=c("A.","B."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg2.pdf"),p,device="pdf",width=8,height=11)
+p<-ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1,2),labels=c("A ","B ")),p3,
+          ncol=2,widths=c(2,1),labels=c("","C "))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=8)
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=8)
 
-p<-ggarrange(p3,p4a,nrow=2,heights=c(1,1.5),labels=c("A.","B."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg3.pdf"),p,device="pdf",width=8,height=11)
-
-p<-ggarrange(p6a,p6b,nrow=2,heights=c(1,1),labels=c("A.","B."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg4.pdf"),p,device="pdf",width=8,height=6)
 
 
 

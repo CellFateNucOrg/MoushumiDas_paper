@@ -500,9 +500,10 @@ p5<-ggarrange(plotlist=plotList,ncol=3,nrow=2)
 
 p<-ggarrange(p1,p2,p5,nrow=3,heights=c(2.5,1.5,3),labels=c("A ","B ","C "))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=8,height=11)
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.png"),p,device="png",width=8,height=11)
 
 nullp<-NULL
 p<-ggarrange(p3,p4,nullp,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=8,height=11)
-
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=8,height=11)
 
