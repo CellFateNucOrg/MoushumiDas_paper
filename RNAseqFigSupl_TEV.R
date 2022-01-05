@@ -6,6 +6,7 @@ library(lattice)
 library(rtracklayer)
 library(GenomicRanges)
 library(ggpubr)
+library(Cairo)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -58,7 +59,7 @@ for (grp in groupsOI){
   print(grp)
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[!is.na(salmon$padj),]
-  #nrow(filterResults(salmon,padj=0.05,lfc=0.5,direction="lt",chr="autosomes"))
+  #nrow(filterResults(salmon,padj=0.05,lfc=-0.5,direction="lt",chr="autosomes"))
   print(paste0(nrow(salmon)," genes before filtering"))
   print(paste0(sum(is.na(salmon$padj))," have padj that is NA"))
   #salmon$expressed<-sum(salmon$baseMean>10)
@@ -77,7 +78,7 @@ sig$XvA<-ifelse(sig$chr=="chrX","chrX","Autosomes")
 table(sig$XvA)
 sig$upVdown[sig$log2FoldChange<0]<-"down"
 sig$upVdown[sig$log2FoldChange>0]<-"up"
-sig$upVdown<-factor(sig$upVdown,levels=c("down","up"))
+sig$upVdown<-factor(sig$upVdown)
 table(sig$upVdown)
 row.names(sig)<-NULL
 SMC<-NULL
@@ -94,18 +95,20 @@ dd1$upVdown<-relevel(dd1$upVdown,"up")
 p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMCpretty,linetype=XvA)) +
   geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
   theme_classic() + xlim(c(0,1.5)) +
-  scale_color_discrete(labels = ggplot2:::parse_safe(levels(dd1$SMCpretty)))+
+  scale_color_discrete(labels = ggplot2:::parse_safe(levels(dd1$SMCpretty)),
+                       name=element_blank())+
+  scale_linetype_discrete(name=element_blank()) +
   xlab("Absolute log2 fold change")+ylab("Fraction of significant genes")
-#p
+
 
 #stat_ecdf(aes(colour=SMC,linetype=XvA),alpha=0.7)
-p1<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
-  annotate("text",label="0.5",size=4, x=0.5, y=1,hjust=-0.05,color="grey") +
+p<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
+  annotate("text",label="0.5",size=4, x=0.5, y=1, hjust=-0.05,color="grey") +
   geom_vline(aes(xintercept = 0.15), color="grey") +
   annotate("text",label="0.15",size=4, x=0.15, y=1,hjust=-0.05,color="grey") +
   theme(strip.text = element_text(size = 12), axis.text=element_text(size=12),
         axis.title=element_text(size=12))
-#p1
+
 
 # to get fraction between 0.15 and 0.5 lfc
 dd2<-sig %>% dplyr::filter(padj<localPadj) %>%
@@ -119,26 +122,26 @@ dd2[order(dd2$q2),]
 na.omit(sig) %>% group_by(SMC,XvA) %>% summarise(count=n())
 
 # to add tables of number of signifcant genes to plot
-ttu<-with(sig[sig$padj<localPadj & sig$upVdown=="up",],table(XvA,SMC))
-ttu<-pivot_wider(as.data.frame(ttu),names_from=SMC,values_from=Freq)
+ttu<-with(sig[sig$padj<localPadj & sig$upVdown=="up",],table(XvA,SMCpretty))
+ttu<-pivot_wider(as.data.frame(ttu),names_from=SMCpretty,values_from=Freq)
 names(ttu)<-gsub("XvA","",names(ttu))
 
-ttd<-with(sig[sig$padj<localPadj & sig$upVdown=="down",],table(XvA,SMC))
-ttd<-pivot_wider(as.data.frame(ttd),names_from=SMC,values_from=Freq)
+ttd<-with(sig[sig$padj<localPadj & sig$upVdown=="down",],table(XvA,SMCpretty))
+ttd<-pivot_wider(as.data.frame(ttd),names_from=SMCpretty,values_from=Freq)
 names(ttd)<-gsub("XvA","",names(ttd))
 
-tbs<-list("up"=ttu,
-          "down"=ttd)
+tbs<-list("down"=ttd,
+          "up"=ttu)
 
 df <- tibble(x = rep(1.5, 2),
              y = rep(0, 2),
-             upVdown= c("up","down"),
+             upVdown=factor(c("down","up"),levels=c("up","down")),
              tbl = tbs)
 
-p1<-p1 + geom_table(data = df, aes(x = x, y = y,label = tbl),parse=T,
-                table.theme = ttheme_gtlight)
+p1<-p + geom_table(data = df, aes(x = x, y = y,label = tbl), parse=T,
+                table.theme = ttheme_gtlight, inherit.aes=F,size=2.5)
 
-p1
+#p1
 
 
 
@@ -161,65 +164,65 @@ allSig$SMC<- factor(allSig$SMC,levels=groupsOI,labels=prettyNames)
 
 
 p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
-  geom_boxplot(outlier.shape=NA) +
+  geom_boxplot(outlier.shape=NA,show.legend=NULL) +
   facet_grid(cols=vars(SMC),labeller=label_parsed) + theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())+
   ylim(c(-0.5,1)) + scale_fill_grey(start=0.8, end=0.4)+
-  geom_hline(yintercept=0,linetype="dotted",col="grey40")+
-  xlab("Chromosome") +ylab("Log2(Fold Change)")
+  geom_hline(yintercept=0,linetype="dashed",col="red")+
+  xlab("Chromosome") + ylab("Log2(Fold Change)")
 
-##################-
-## boxplot LFC up/down significant------
-##################-
-localLFCval<-0
-sigTables<-list()
-for (grp in useContrasts){
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],
-                         "_DESeq2_fullResults_p",padjVal,".rds"))
-  salmon<-salmon[!is.na(salmon$chr),]
-  rownames(salmon)<-NULL
-  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
-                                                      padj=padjVal, lfc=localLFCval,
-                                                      namePadjCol="padj",
-                                                      nameLfcCol="log2FoldChange",
-                                                      direction="both",
-                                                      chr="all", nameChrCol="chr"))
-}
-
-# upregulated
-sigList<-lapply(sigTables, getSignificantGenes,
-                padj=padjVal,lfc=localLFCval,direction="gt")
-
-sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList$updown<-"up"
-sigTbl<-sigList
-
-
-# downregulated
-sigList<-lapply(sigTables, getSignificantGenes,
-                padj= padjVal,lfc= -localLFCval,direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$chr<-as.factor(sigTbl$chr)
-sigTbl$SMC<-factor(sigTbl$SMC, levels=groupsOI,labels=prettyNames)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-rownames(sigTbl)<-NULL
-sigTbl$XvA<-ifelse(sigTbl$chr=="chrX","chrX","Autosomes")
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p2a<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-  facet_grid(cols=vars(XvA)) + ylim(yminmax) +
-  ggtitle("Absolute LFC of significantly changed genes by chromosome type") +
-  theme_minimal() + xlab("")+ ylab("|log2(FC)|")+
-  scale_fill_brewer(palette="Dark2",labels = ggplot2:::parse_safe(levels(sigTbl$SMC)))
+# ##################-
+# ## boxplot LFC up/down significant------
+# ##################-
+# localLFCval<-0
+# sigTables<-list()
+# for (grp in useContrasts){
+#   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],
+#                          "_DESeq2_fullResults_p",padjVal,".rds"))
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   rownames(salmon)<-NULL
+#   sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
+#                                                       padj=padjVal, lfc=localLFCval,
+#                                                       namePadjCol="padj",
+#                                                       nameLfcCol="log2FoldChange",
+#                                                       direction="both",
+#                                                       chr="all", nameChrCol="chr"))
+# }
+#
+# # upregulated
+# sigList<-lapply(sigTables, getSignificantGenes,
+#                 padj=padjVal,lfc=localLFCval,direction="gt")
+#
+# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
+# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+# sigList<-do.call(rbind,sigList)
+# sigList$updown<-"up"
+# sigTbl<-sigList
+#
+#
+# # downregulated
+# sigList<-lapply(sigTables, getSignificantGenes,
+#                 padj= padjVal,lfc= -localLFCval,direction="lt")
+#
+# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
+# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+# sigList<-do.call(rbind,sigList)
+# sigList$updown<-"down"
+# sigTbl<-rbind(sigTbl,sigList)
+# sigTbl$chr<-as.factor(sigTbl$chr)
+# sigTbl$SMC<-factor(sigTbl$SMC, levels=groupsOI,labels=prettyNames)
+# sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+# rownames(sigTbl)<-NULL
+# sigTbl$XvA<-ifelse(sigTbl$chr=="chrX","chrX","Autosomes")
+#
+# yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
+# p2a<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
+#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
+#   facet_grid(cols=vars(XvA)) + ylim(yminmax) +
+#   ggtitle("Absolute LFC of significantly changed genes by chromosome type") +
+#   theme_minimal() + xlab("")+ ylab("|log2(FC)|")+
+#   scale_fill_brewer(palette="Dark2",labels = ggplot2:::parse_safe(levels(sigTbl$SMC)))
 
 
 
@@ -240,40 +243,48 @@ for (grp in groupsOI){
                         chr="all", nameChrCol="chr"))
 }
 
-plotTitle<-list(label="Autosomal up",fontsize=8)
+plotTitle<-list(label="Autosomal",fontsize=8)
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 subset1<-achr[c("dpy26","kle2","scc1")]
 sigGenes<-lapply(subset1, "[[","wormbaseID")
+uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Aup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3a<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3a)
 
 subset2<-achr[c("scc1","coh1","scc1coh1")]
 sigGenes<-lapply(subset2, "[[","wormbaseID")
+uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Aup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3b<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3b)
 
-plotTitle<-list(label="chrX up",fontsize=8)
+plotTitle<-list(label="chrX",fontsize=8)
 xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
 subset1<-xchr[c("dpy26","kle2","scc1")]
 sigGenes<-lapply(subset1,"[[","wormbaseID")
+uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Xup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3c<-plot(fit, quantities=list(type=eulerLabelsType),
-         main=plotTitle)
+         main=plotTitle, labels=list(font=4))
 #print(p3c)
 
 subset2<-xchr[c("scc1","coh1","scc1coh1")]
 sigGenes<-lapply(subset2,"[[","wormbaseID")
+uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Xup"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3d<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3d)
 
 
@@ -283,52 +294,64 @@ for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[grp]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+    getSignificantGenes(salmon, padj=padjVal, lfc= -lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
                         chr="all", nameChrCol="chr"))
 }
 
-plotTitle<-list(label="Autosomal down",fontsize=8)
+plotTitle<-list(label="Autosomal",fontsize=8)
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 subset1<-achr[c("dpy26","kle2","scc1")]
 sigGenes<-lapply(subset1, "[[","wormbaseID")
+uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Adown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3e<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3e)
 
 subset2<-achr[c("scc1","coh1","scc1coh1")]
 sigGenes<-lapply(subset2, "[[","wormbaseID")
+uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Adown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3f<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3f)
 
 
-plotTitle<-list(label="chrX down",fontsize=8)
+plotTitle<-list(label="chrX",fontsize=8)
 xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
 subset1<-xchr[c("dpy26","kle2","scc1")]
 sigGenes<-lapply(subset1, "[[","wormbaseID")
+uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Xdown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3g<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3g)
 
 subset2<-xchr[c("scc1","coh1","scc1coh1")]
 sigGenes<-lapply(subset2, "[[","wormbaseID")
+uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
+names(sigGenes)<-uglyNames
 numGenes["Xdown"]<-sum(sapply(sigGenes,length))
 fit<-euler(sigGenes)
 p3h<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
+          main=plotTitle, labels=list(font=4))
 #print(p3h)
 
-p3<-ggarrange(p3a,p3c,p3b,p3d,p3e,p3g,p3f,p3h,ncol=4,nrow=2)
+p3<-ggarrange(ggarrange(p3a,p3c,p3b,p3d,ncol=4, widths=c(0.8,1.3,1,0.5)),
+                        ggarrange(p3e,p3g,p3f,p3h,ncol=4,widths=c(0.8,0.3,1.2,0.4)),
+                                  nrow=2,labels=c("Up regulated","Down regulated"),
+              heights=c(1,0.9))
 
+#p3
 
 
 ##################-
@@ -358,55 +381,47 @@ geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
 
 geneTable<-na.omit(geneTable)
 allContrasts<-NULL
-contrastNm<-NULL
+#contrastNm<-NULL
+contrastNames<-c()
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
-
+  prettyGrp1<-prettyNames[[combnTable[1,i]]]
+  prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  df$contrast<-paste(grp1,"v",grp2)
+  df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  contrastNames<-c(contrastNames,df$contrast[1])
+  #df$contrast<-paste(grp1,"v",grp2)
   #df$Rval<-Rval
   if(is.null(allContrasts)){
     allContrasts<-df
-    contrastNm<-paste(grp1,"v",grp2)
+    #contrastNm<-paste(grp1,"v",grp2)
   } else {
     allContrasts<-rbind(allContrasts,df)
-    contrastNm<-c(contrastNm,paste(grp1,"v",grp2))
+    #contrastNm<-c(contrastNm,paste(grp1,"v",grp2))
   }
 }
 
-
-firstContrasts<-contrastNm[1:floor(length(contrastNm)/2)]
-df<-allContrasts[allContrasts$contrast %in% firstContrasts,]
-p4a<-ggplot(df,aes(x=group1,y=group2)) +
-  facet_grid(cols=vars(XvA),rows=vars(contrast)) +
-  geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
+allContrasts$XvA<-factor(allContrasts$XvA, levels=c("Autosomes","chrX"))
+allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=contrastNames)
+p4<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
+  facet_wrap(.~contrast,nrow=2,labeller=label_parsed)+
+  geom_point(size=1,alpha=0.4) +
   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
+  geom_smooth(method=lm,se=F,fullrange=T, size=0.7,show.legend = T) +
+  theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        axis.text=element_text(size=12), axis.title=element_text(size=12),
-        strip.text = element_text(size = 12)) +
+        legend.position="bottom", strip.text.x = element_text(size = 9),
+        legend.title=element_blank()) +
+  scale_color_manual(values=c("#111111","#FF1111"))+
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
-
-
-p4b<-ggplot(allContrasts[!(allContrasts$contrast %in% firstContrasts),],aes(x=group1,y=group2)) +
-  facet_grid(cols=vars(XvA),rows=vars(contrast)) +
-  geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
-  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        axis.text=element_text(size=12), axis.title=element_text(size=12),
-        strip.text = element_text(size = 12)) +
-  geom_hline(yintercept=0,lty=3,col="grey70",) +
-  geom_vline(xintercept=0,lty=3,col="grey70") +
-  ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
-
-
+                   cor.coef.name = c("R"), output.type = "text",
+                   show.legend=F,size=3) +
+  xlab(label=element_blank()) + ylab(label=element_blank())
+#p4
 
 ###################-
 ## volcano plots------
@@ -416,81 +431,78 @@ plotList<-list()
 geneTable<-NULL
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-  p<-plotVolcanoXvA(salmon)
+  p<-plotVolcanoXvA(salmon,addLegend=F)
   plotList[[grp]]<-p+ggtitle(label=prettyNames[[which(groupsOI==grp)]])
 }
 
-p5<-ggarrange(plotlist=plotList,ncol=2,nrow=3)
+plotList[["legend"]]<-plotVolcanoXvA(salmon,addLegend=T)
+p5<-ggarrange(plotlist=plotList,ncol=3,nrow=2)
 
 
-###################-
-## AB compartments------
-###################-
-
-pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
-
-listgr<-NULL
-for (grp in groupsOI){
-  #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-  salmongr<-sort(salmongr)
-  salmongr<-assignGRtoAB(salmongr,pca2,pcaName="N2")
-  salmongr$SMC<-grp
-  listgr[[grp]]<-salmongr
-}
-
-# genes that change significantly
-sigList<-lapply(lapply(listgr,data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both",chr="autosomes",
-                nameChrCol="seqnames")
-
-compartmentTable<-do.call(rbind,sigList)
-compartmentTable$updown<-ifelse(compartmentTable$log2FoldChange>0,"up","down")
-compartmentTable$updown<-factor(compartmentTable$updown,levels=c("up","down"))
-#compartmentTable$XvA<-ifelse(compartmentTable$seqnames=="chrX","chrX","Autosomes")
-compartmentTable$SMC<-factor(compartmentTable$SMC,levels=useContrasts,labels=prettyNames)
-#table(compartmentTable$updown)
-
-p6a<-ggplot(compartmentTable,aes(x=compartment,fill=updown)) + geom_bar(position=position_dodge()) +
-  facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
-  scale_fill_grey() + ggtitle("Number of autosomal genes by compartment that significantly change")
-
-
-allList<-lapply(listgr,data.frame)
-allTable<-do.call(rbind,allList)
-allTable<-allTable[allTable$seqnames!="chrX",]
-allTable$updown<-ifelse(allTable$log2FoldChange>0,"up","down")
-allTable$updown[allTable$log2FoldChange==0]<-NA
-allTable$updown<-factor(allTable$updown,levels=c("up","down"))
-#allTable$XvA<-ifelse(allTable$seqnames=="chrX","chrX","Autosomes")
-allTable$SMC<-factor(allTable$SMC,levels=useContrasts,labels=prettyNames)
-
-pergrp<-countPerGroup<-compartmentTable %>% group_by(compartment,updown,SMC) %>% summarize(count=n())
-all<-allTable %>% group_by(compartment,updown,SMC) %>% summarize(all=n())
-
-pergrp<-left_join(pergrp,all)
-pergrp$fraction<-pergrp$count/pergrp$all
-
-p6b<-ggplot(pergrp,aes(x=compartment,y=fraction,fill=updown)) +
-  geom_bar(position=position_dodge(),stat="identity") +
-  facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
-  scale_fill_grey() + ggtitle("Fraction of autosomal genes per compartment that significantly change")
-
+# ###################-
+# ## AB compartments------
+# ###################-
+#
+# pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
+#
+# listgr<-NULL
+# for (grp in groupsOI){
+#   #grp=groupsOI[1]
+#   salmon<-readRDS(file=paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#   salmongr<-sort(salmongr)
+#   salmongr<-assignGRtoAB(salmongr,pca2,pcaName="N2")
+#   salmongr$SMC<-grp
+#   listgr[[grp]]<-salmongr
+# }
+#
+# # genes that change significantly
+# sigList<-lapply(lapply(listgr,data.frame), getSignificantGenes,
+#                 padj=padjVal,lfc=lfcVal,direction="both",chr="autosomes",
+#                 nameChrCol="seqnames")
+#
+# compartmentTable<-do.call(rbind,sigList)
+# compartmentTable$updown<-ifelse(compartmentTable$log2FoldChange>0,"up","down")
+# compartmentTable$updown<-factor(compartmentTable$updown,levels=c("up","down"))
+# #compartmentTable$XvA<-ifelse(compartmentTable$seqnames=="chrX","chrX","Autosomes")
+# compartmentTable$SMC<-factor(compartmentTable$SMC,levels=useContrasts,labels=prettyNames)
+# #table(compartmentTable$updown)
+#
+# p6a<-ggplot(compartmentTable,aes(x=compartment,fill=updown)) + geom_bar(position=position_dodge()) +
+#   facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
+#   scale_fill_grey() + ggtitle("Number of autosomal genes by compartment that significantly change")
+#
+#
+# allList<-lapply(listgr,data.frame)
+# allTable<-do.call(rbind,allList)
+# allTable<-allTable[allTable$seqnames!="chrX",]
+# allTable$updown<-ifelse(allTable$log2FoldChange>0,"up","down")
+# allTable$updown[allTable$log2FoldChange==0]<-NA
+# allTable$updown<-factor(allTable$updown,levels=c("up","down"))
+# #allTable$XvA<-ifelse(allTable$seqnames=="chrX","chrX","Autosomes")
+# allTable$SMC<-factor(allTable$SMC,levels=useContrasts,labels=prettyNames)
+#
+# pergrp<-countPerGroup<-compartmentTable %>% group_by(compartment,updown,SMC) %>% summarize(count=n())
+# all<-allTable %>% group_by(compartment,updown,SMC) %>% summarize(all=n())
+#
+# pergrp<-left_join(pergrp,all)
+# pergrp$fraction<-pergrp$count/pergrp$all
+#
+# p6b<-ggplot(pergrp,aes(x=compartment,y=fraction,fill=updown)) +
+#   geom_bar(position=position_dodge(),stat="identity") +
+#   facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
+#   scale_fill_grey() + ggtitle("Fraction of autosomal genes per compartment that significantly change")
+#
 
 
 ############### Final assembly #########
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p1,device="pdf",width=8,height=6)
 
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p5,device="pdf",width=8,height=11)
+p<-ggarrange(p1,p2,p5,nrow=3,heights=c(2.5,1.5,3),labels=c("A ","B ","C "))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=8,height=11)
 
-p<-ggarrange(p2,p2a,p3,nrow=3,heights=c(1.5,1.5,3),labels=c("A.","B.","C."))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.pdf"),p,device="pdf",width=8,height=11)
+nullp<-NULL
+p<-ggarrange(p3,p4,nullp,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=8,height=11)
 
-p<-ggarrange(p4a,p4b,ncol=2)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV4.pdf"),p,device="pdf",width=11,height=8)
-
-p<-ggarrange(p6a,p6b,nrow=2)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV5.pdf"),p,device="pdf",width=8,height=11)
 

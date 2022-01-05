@@ -94,6 +94,7 @@ p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
 ##################-
 eulerLabelsType=c("counts")
 ## significantly changed genes
+#autosomes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
@@ -101,7 +102,7 @@ for (grp in groupsOI){
                                                                       namePadjCol="padj",
                                                                       nameLfcCol="log2FoldChange",
                                                                       direction="both",
-                                                                      chr="all", nameChrCol="chr"))
+                                                                      chr="autosomes", nameChrCol="chr"))
 }
 
 subset1<-sigTables[c("aux_sdc3bg","dpy26","sdc3dpy26")]
@@ -111,31 +112,37 @@ sigGenes<-lapply(subset1,"[[","wormbaseID")
 #                       expression(sdc-3^AID*dpy-26^cs))
 uglyNames<-c("sdc-3AID","dpy26cs","sdc3AIDdpy-26cs")
 names(sigGenes)<-uglyNames
+
 fit<-euler(sigGenes)
 p2<-plot(fit, quantities=list(type=eulerLabelsType),
          labels=list(font=4))
 p2
-# for(i in seq(1,2*length(prettyNames),by=2)){
-#   i=1
-#   gg <- getGrob(p2, paste0("tag.label.",i))
-#   gg[[1]]<-substitute(x,list(x=prettyNames[[1]]))
-#   gg[[2]]<-substitute(x,list(x=prettyNames[[2]]))
-#   gg[[3]]<-substitute(x,list(x=prettyNames[[3]]))
-#   setGrob(p2, paste0("tag.label.",1), gg)
-# }
-# p3
-# draw(p2)
 
-#,
-#         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
-#                                paste(lapply(row.names(fit$ellipses), function(x){
-#                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
-#                                }), collapse="  ")), fontsize=8))
+# chrX
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                                      namePadjCol="padj",
+                                                      nameLfcCol="log2FoldChange",
+                                                      direction="both",
+                                                      chr="chrX", nameChrCol="chr"))
+}
 
-p2
+subset1<-sigTables[c("aux_sdc3bg","dpy26","sdc3dpy26")]
+sigGenes<-lapply(subset1,"[[","wormbaseID")
+# names(sigGenes)<-list(expression(sdc-3^AID),
+#                       expression(dpy-26^cs),
+#                       expression(sdc-3^AID*dpy-26^cs))
+uglyNames<-c("sdc-3AID","dpy26cs","sdc3AIDdpy-26cs")
+names(sigGenes)<-uglyNames
 
-print(p2
-      )
+fit<-euler(sigGenes)
+p2a<-plot(fit, quantities=list(type=eulerLabelsType),
+         labels=list(font=4))
+p2a
+
+print(p2)
 
 
 
@@ -185,9 +192,9 @@ hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",
                                      gp=gpar(fontface="italic",fontsize=10)),
              row_order = get_order(o1,1),  column_order=1:length(useContrasts),
              show_row_names=F,row_title="chrX",column_names_rot = 90,
-             heatmap_width = unit(0.7, "npc"),)
+             heatmap_width = unit(0.7, "npc"),show_heatmap_legend=F)
 htlist=hm1 %v% hm2
-ph1<-grid::grid.grabExpr(draw(htlist))
+ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 10, 2, 2), "mm")))
 
 draw(htlist)
 
@@ -195,7 +202,6 @@ pdf(file=paste0(workDir,"/plots/hclustering_deg.pdf"),width=5,height=8,
     paper="a4")
 draw(htlist)
 dev.off()
-# clustMethod="pearson"
 # hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
 #             clustering_distance_rows=clustMethod, column_order=1:5, column_title=clustMethod,
 #             show_row_names=F,row_title="Autosomes",column_names_rot = 45)
@@ -271,169 +277,29 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   xlab(label=element_blank()) + ylab(label=element_blank())
 p3
 
-#################-
-## Anchors ---------
-#################-
-mustacheBatch="PMW366"
-#mustacheBatch="PMW382"
 
-loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
-grl<-zipup(loops)
-anchor1<-do.call(c,lapply(grl,"[",1))
-anchor2<-do.call(c,lapply(grl,"[",2))
-mcols(anchor1)<-mcols(loops)
-mcols(anchor2)<-mcols(loops)
-
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
-
-#separate anchors from inside tads
-tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-# tads_in<-reduce(tads_in)
-tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
-anchors<-sort(c(anchor1,anchor2))
-anchors<-resize(anchors,width=20000,fix="center")
-#anchors<-reduce(anchors)
-#ol<-findOverlaps(anchors,tads_in)
-#anchors<-anchors[-queryHits(ol)]
-
-width(anchors)
-dataList<-list()
-plotList<-list()
-#grp=useContrasts[3]
-for (grp in useContrasts){
-  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
-                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-  salmongr<-sort(salmongr)
-  ol<-findOverlaps(salmongr,tads_in,type="within")
-  insideTads<-salmongr[queryHits(ol)]
-  ol<-findOverlaps(salmongr,anchors)
-  atAnchors<-salmongr[queryHits(ol)]
-  insideTads$Loops<-"inLoop"
-  atAnchors$Loops<-"Anchor"
-  df<-data.frame(c(insideTads,atAnchors))
-  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
-  df$SMC<-grp
-  dataList[[grp]]<-df
-}
-
-## focus on chrX loops
-dataTbl<-do.call(rbind,dataList)
-xchr<-dataTbl[dataTbl$seqnames=="chrX",]
-
-xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
-p4a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+ theme_bw()+
-  geom_hline(yintercept=0,linetype="dotted",color="grey20") +
-  theme(legend.position="none",axis.text.x=element_text(angle=45,hjust=1),
-        plot.title = element_text(size = 10))+
-  xlab(label=element_blank()) +
-  ggtitle("TEVonly loops") + ylab("log2(Fold Change)")
-
-xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
-xchr$measure="Expr"
-p4b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) +  theme_bw() +
-  theme(legend.position = "none", axis.text.x=element_text(angle=45,hjust=1),
-        plot.title = element_text(size = 10)) +
-  xlab(label=element_blank()) + ggtitle("") + ylab("log2(Base Mean Counts)")
-
-p4<-ggarrange(p4b,p4a,ncol=2,widths=c(1,4.1))
-
-#mustacheBatch="PMW366"
-mustacheBatch="PMW382"
-
-loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
-grl<-zipup(loops)
-anchor1<-do.call(c,lapply(grl,"[",1))
-anchor2<-do.call(c,lapply(grl,"[",2))
-mcols(anchor1)<-mcols(loops)
-mcols(anchor2)<-mcols(loops)
-
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
-
-#separate anchors from inside tads
-tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-# tads_in<-reduce(tads_in)
-tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
-anchors<-sort(c(anchor1,anchor2))
-anchors<-resize(anchors,width=20000,fix="center")
-#anchors<-reduce(anchors)
-#ol<-findOverlaps(anchors,tads_in)
-#anchors<-anchors[-queryHits(ol)]
-
-width(anchors)
-dataList<-list()
-plotList<-list()
-#grp=useContrasts[3]
-for (grp in useContrasts){
-  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
-                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-  salmongr<-sort(salmongr)
-  ol<-findOverlaps(salmongr,tads_in,type="within")
-  insideTads<-salmongr[queryHits(ol)]
-  ol<-findOverlaps(salmongr,anchors)
-  atAnchors<-salmongr[queryHits(ol)]
-  insideTads$Loops<-"inLoop"
-  atAnchors$Loops<-"Anchor"
-  df<-data.frame(c(insideTads,atAnchors))
-  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
-  df$SMC<-grp
-  dataList[[grp]]<-df
-}
-
-## focus on chrX loops
-dataTbl<-do.call(rbind,dataList)
-xchr<-dataTbl[dataTbl$seqnames=="chrX",]
-
-xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
-p5a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+ theme_bw()+
-  facet_grid(~SMC,labeller=label_parsed) +ylim(c(-1,1))+
-  geom_hline(yintercept=0,linetype="dotted",color="grey20") +
-  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
-        plot.title = element_text(size = 10))+
-  xlab(label=element_blank()) + ylab("log2(Fold Change)")+
-  ggtitle(expression(paste(italic("dpy-26"^cs)," loops")))
-
-xchr$measure="Expr"
-p5b<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops)) +
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) + theme_bw() +
-  theme(legend.position = "none", axis.text.x=element_text(angle=45,hjust=1),
-        plot.title = element_text(size = 10)) +
-  xlab(label=element_blank()) + ggtitle("") +ylab("log2(Base Mean Counts)")
-
-p5<-ggarrange(p5b,p5a,ncol=2,widths=c(1,4.1))
 
 
 
 #p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
-p<-ggarrange(ggarrange(ggarrange(p1,p2,ncol=2,widths=c(3,1),labels=c("A.","B.")),
-                      ggarrange(ph1,p3,nrow=1,ncol=2,labels=c("C.","D."),widths=c(1.2,3)),
-             nrow=2,heights=c(3,5)),
-             ggarrange(p4,p5,nrow=2,labels=c("E.","F."),heights=c(1,1)),
-      ncol=2,widths=c(5,4.3))
+# p<-ggarrange(ggarrange(p1,ggarrange(p2,p2a,nrow=1,ncol=2,labels=c("Autosomes","chrX")),
+#                        nrow=2,ncol=1,heights=c(2,1),labels=c("A. ","B. ")),
+#              ph1,ncol=2,widths=c(3,1),labels=c("","C. "))
+pnull<-NULL
 
+p<-ggarrange(p1,ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1),
+                          labels=c("","Autosomes","chrX","")),
+             ph1,ncol=3,widths=c(2,0.8,1),labels=c("A ","B ","C "))
 
 # p<-ggarrange(p1,
 #             ggarrange(ggarrange(p2,p2a,nrow=2,labels=c("B.","C."), label.x=0.1),
 #                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
 #              nrow=2,labels=c("A."),heights=c(4,4))
 
-ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=11,height=8)
-
+#ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=11,height=5)
+ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=11,height=5)
 
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 

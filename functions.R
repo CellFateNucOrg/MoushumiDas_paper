@@ -480,9 +480,10 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
 #' @param resLFC results object from DESeq2
 #' @param lfcVal  threshold Log2 fold change for significance (default=0.5)
 #' @param padj threshold adjust p value for significance (default=0.05)
+#' @param addLegend Should legend be added (default: F)
 #' @return Volcano plot object
 #' @export
-plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05){
+plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05, addLegend=F){
   resLFC<-resLFC[!is.na(resLFC$padj),]
   resByChr<-resLFC[order(resLFC$chr),]
   # create custom key-value pairs for 'low', 'chrX', 'autosome' expression by fold-change
@@ -492,17 +493,17 @@ plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05){
   names(keyvals) <- rep('NS', nrow(resByChr))
 
   keyvals[which(resByChr$chr=="chrX")] <- 'red2'
-  names(keyvals)[which(resByChr$chr=="chrX")] <- 'chrX'
-  nonSigXchr<-which(resByChr$chr=="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<0.5))
+  names(keyvals)[which(resByChr$chr=="chrX")] <- "chrX LFC>0.5"
+  nonSigXchr<-which(resByChr$chr=="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<=0.5))
   keyvals[nonSigXchr]<-"#c3909b"
-  names(keyvals)[nonSigXchr]<-"X NS"
+  names(keyvals)[nonSigXchr]<-"chrX LFC\u226400.5"
 
   # modify keyvals for variables with fold change < -2.5
   keyvals[which(resByChr$chr!="chrX")] <- 'royalblue'
-  names(keyvals)[which(resByChr$chr!="chrX")] <- 'Autosomes'
-  nonSigAchr<-which(resByChr$chr!="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<0.5))
+  names(keyvals)[which(resByChr$chr!="chrX")] <-"Autosomal LFC>0.5"
+  nonSigAchr<-which(resByChr$chr!="chrX" & (resByChr$padj>0.05 | abs(resByChr$log2FoldChange)<=0.5))
   keyvals[nonSigAchr]<-"#6b8ba4"
-  names(keyvals)[nonSigAchr]<-"A NS"
+  names(keyvals)[nonSigAchr]<-"Autosomal LFC\u22640.5"
 
   sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>lfcVal,na.rm=T)
   sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -lfcVal,na.rm=T)
@@ -524,12 +525,15 @@ plotVolcanoXvA<-function(resLFC,lfcVal=0.5,padj=0.05){
                                       FCcutoff=lfcVal,
                                       xlab=bquote(~Log[2]~'FC'),
                                       ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                                      legendPosition = 'bottom',
-                                      legendLabSize = 8,
-                                      legendIconSize = 3.0,
+                                      legendPosition =ifelse(addLegend,"left","right"),
+                                      legendLabSize = ifelse(addLegend,8,0),#8,
+                                      legendIconSize = ifelse(addLegend,3,0),#3.0,
                                       axisLabSize=8,
                                       colCustom=keyvals,
                                       colAlpha=0.5,
                                       pointSize = 1.0)
+  if(!addLegend){
+     p<-p+theme(legend.position="none")
+  }
   return(p)
 }

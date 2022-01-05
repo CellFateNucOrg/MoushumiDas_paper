@@ -167,7 +167,7 @@ sigGenes<-lapply(subset1,"[[","wormbaseID")
 uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
 names(sigGenes)<-uglyNames
 fit<-euler(sigGenes)
-p2<-plot(fit, quantities=list(type=eulerLabelsType))#,
+p2<-plot(fit, quantities=list(type=eulerLabelsType), labels=list(font=4))#,
 #         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
 #                                paste(lapply(row.names(fit$ellipses), function(x){
 #                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
@@ -181,7 +181,7 @@ sigGenes<-lapply(subset2,"[[","wormbaseID")
 uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
 names(sigGenes)<-uglyNames
 fit<-euler(sigGenes)
-p2a<-plot(fit, quantities=list(type=eulerLabelsType))#,
+p2a<-plot(fit, quantities=list(type=eulerLabelsType), labels=list(font=4))#,
 #         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
 #                                paste(lapply(row.names(fit$ellipses), function(x){
 #                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
@@ -226,19 +226,22 @@ heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("cyan","black","yellow"))
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]), method = "PCA")
 hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
              row_order = get_order(o1,1), column_order=1:length(useContrasts),
-             show_row_names=F,row_title="Autosomes",column_names_rot = 90)
+             show_row_names=F,row_title="Autosomes",column_names_rot = 90,
+             use_raster=T,raster_quality=1,raster_device="CairoPNG")
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), method = "PCA")
 hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), name="NA",
              col=heatmapCol,
              column_labels=gt_render(prettyNames1,
                                      gp=gpar(fontface="italic", fontsize=12)),
              row_order = get_order(o1,1),  column_order=1:5,
-             show_row_names=F,row_title="chrX",column_names_rot = 90)
+             show_row_names=F,row_title="chrX",column_names_rot = 90,
+             show_heatmap_legend=F, use_raster=T,raster_quality=1,
+             raster_device="CairoPNG")
 htlist=hm1 %v% hm2
-ph1<-grid::grid.grabExpr(draw(htlist))
+ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 20, 2, 20), "mm")))
 pdf(file=paste0(workDir,"/plots/hclustering_TEV.pdf"),width=5,height=8,
     paper="a4")
-draw(htlist)
+draw(htlist,padding= unit(c(2, 2, 2, 2), "mm"))
 dev.off()
 # clustMethod="pearson"
 # hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
@@ -319,8 +322,8 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
 p<-ggarrange(ggarrange(p1,
-                 ggarrange(p2,p2a,nrow=2,labels=c("B.","C."),label.x=0.1),ncol=2,widths=c(3,1)),
-              ggarrange(ph1, p3,nrow=1,ncol=2,labels=c("D.","E.")),nrow=2,heights=c(4,4), labels=c("A."))
+                 ggarrange(p2,p2a,nrow=2,labels=c("B ","C "),label.x=0.1),ncol=2,widths=c(3,1)),
+              ggarrange(ph1, p3,nrow=1,ncol=2,labels=c("D ","E "),widths=c(1.5,2)),nrow=2,heights=c(4,4), labels=c("A "))
 
 
 # p<-ggarrange(p1,
@@ -328,9 +331,11 @@ p<-ggarrange(ggarrange(p1,
 #                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
 #              nrow=2,labels=c("A."),heights=c(4,4))
 
+#ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
+
 ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=10,height=10)
 
-
+ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 
 
