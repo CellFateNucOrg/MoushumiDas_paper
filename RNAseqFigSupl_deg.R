@@ -472,7 +472,7 @@ p4<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
 
 ############### Final assembly #########
 
-p<-ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1,2),labels=c("A ","B ")),p3,
+p<-ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B ")),p3,
           ncol=2,widths=c(2,1),labels=c("","C "))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=8)
 ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=8)
