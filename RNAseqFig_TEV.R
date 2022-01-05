@@ -7,6 +7,7 @@ library(ComplexHeatmap)
 library(circlize)
 library(fastcluster)
 library(seriation)
+library(gridtext)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -22,18 +23,22 @@ prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^cs),list(x="kle-2")),
                substitute(italic(x^cs),list(x="scc-1")),
                substitute(italic(x^cs),list(x="coh-1")),
-               substitute(italic(x^cs~y^cs,list(x="scc-1",y="coh-1"))))
+               substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
+#plot(1:100,main=prettyNames[[5]])
+
+prettyNames1<-c("dpy-26^cs","kle-2^cs","scc-1^cs","coh-1^cs","scc-1^(cs)coh-1^cs")
+
 
 
 names(contrastsOI)<-useContrasts
-strains<-c("366","382","775","784","828","844")
-strain<-factor(strains,levels=strains)
-SMC<-strain
-levels(SMC)<-c("TEVonly",useContrasts)
-
-controlGrp<-levels(SMC)[1] # control group
-groupsOI<-levels(SMC)[-1]
-
+# strains<-c("366","382","775","784","828","844")
+# strain<-factor(strains,levels=strains)
+# SMC<-strain
+# levels(SMC)<-c("TEVonly",useContrasts)
+#
+# controlGrp<-levels(SMC)[1] # control group
+# groupsOI<-levels(SMC)[-1]
+groupsOI<-useContrasts
 
 
 source(paste0(workDir,"/functions.R"))
@@ -97,7 +102,7 @@ downPerChr$genes<-downPerChr$genes*(-1)
 # combine up and down
 sigPerChr<-rbind(upPerChr,downPerChr)
 sigPerChr$direction<-factor(sigPerChr$direction,levels=c("up","down"))
-sigPerChr$SMC<- factor(sigPerChr$SMC,labels=prettyNames)
+sigPerChr$SMC<- factor(sigPerChr$SMC,levels=groupsOI,labels=prettyNames)
 
 
 base.plot <- function(data) {
@@ -159,8 +164,10 @@ for (grp in groupsOI){
 
 subset1<-sigTables[c("dpy26","kle2","scc1")]
 sigGenes<-lapply(subset1,"[[","wormbaseID")
+uglyNames<-c("dpy-26cs","kle-2cs","scc-1cs")
+names(sigGenes)<-uglyNames
 fit<-euler(sigGenes)
-p2<-plot(fit, quantities=list(type=eulerLabelsType))#,
+p2<-plot(fit, quantities=list(type=eulerLabelsType), labels=list(font=4))#,
 #         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
 #                                paste(lapply(row.names(fit$ellipses), function(x){
 #                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
@@ -171,8 +178,10 @@ print(p2)
 
 subset2<-sigTables[c("scc1","coh1","scc1coh1")]
 sigGenes<-lapply(subset2,"[[","wormbaseID")
+uglyNames<-c("scc-1cs","coh-1cs","scc-1cscoh-1cs")
+names(sigGenes)<-uglyNames
 fit<-euler(sigGenes)
-p2a<-plot(fit, quantities=list(type=eulerLabelsType))#,
+p2a<-plot(fit, quantities=list(type=eulerLabelsType), labels=list(font=4))#,
 #         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
 #                                paste(lapply(row.names(fit$ellipses), function(x){
 #                                  paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
@@ -216,17 +225,23 @@ heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("cyan","black","yellow"))
 
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]), method = "PCA")
 hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
-             row_order = get_order(o1,1), column_order=1:5,
-             show_row_names=F,row_title="Autosomes",column_names_rot = 45)
+             row_order = get_order(o1,1), column_order=1:length(useContrasts),
+             show_row_names=F,row_title="Autosomes",column_names_rot = 90,
+             use_raster=T,raster_quality=1,raster_device="CairoPNG")
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), method = "PCA")
-hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",col=heatmapCol,
+hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), name="NA",
+             col=heatmapCol,
+             column_labels=gt_render(prettyNames1,
+                                     gp=gpar(fontface="italic", fontsize=12)),
              row_order = get_order(o1,1),  column_order=1:5,
-             show_row_names=F,row_title="chrX",column_names_rot = 45)
+             show_row_names=F,row_title="chrX",column_names_rot = 90,
+             show_heatmap_legend=F, use_raster=T,raster_quality=1,
+             raster_device="CairoPNG")
 htlist=hm1 %v% hm2
-ph1<-grid::grid.grabExpr(draw(htlist))
-pdf(file=paste0(workDir,"/plots/hclustering.pdf"),width=5,height=8,
+ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 20, 2, 20), "mm")))
+pdf(file=paste0(workDir,"/plots/hclustering_TEV.pdf"),width=5,height=8,
     paper="a4")
-draw(htlist)
+draw(htlist,padding= unit(c(2, 2, 2, 2), "mm"))
 dev.off()
 # clustMethod="pearson"
 # hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
@@ -275,42 +290,40 @@ contrastNames<-c()
 for(i in c(5,8,9,10)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
+  prettyGrp1<-prettyNames[[combnTable[1,i]]]
+  prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  Rval<-cor(df[,1],df[,2])
-  df$contrast<-paste(prettyGeneName(grp1),"v",prettyGeneName(grp2))
-  contrastNames<-c(contrastNames,paste(prettyGeneName(grp1),"v",prettyGeneName(grp2)))
-  df$Rval<-Rval
+  df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  contrastNames<-c(contrastNames,df$contrast[1])
   if(is.null(allContrasts)){
     allContrasts<-df
   } else {
     allContrasts<-rbind(allContrasts,df)
   }
 }
-sigPerChr$SMC<- factor(sigPerChr$SMC,labels=prettyNames)
 
-allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames)
+allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=contrastNames)
 p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
-  #facet_grid(cols=vars(contrast)) +
-  facet_wrap(vars(contrast),nrow=2)+
+  facet_wrap(vars(contrast),nrow=2,labeller=label_parsed)+
   geom_point(col="#11111155",size=1) +
-  #xlab(prettyGeneName(grp1)) +
-  #ylab(prettyGeneName(grp2)) +
   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
-  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 14) +
-  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +
+  geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 12) +
+  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
+        legend.position="right", strip.text.x = element_text(size = 12)) +
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")
+                   cor.coef.name = c("R"), output.type = "text")+
+  xlab(label=element_blank()) + ylab(label=element_blank())
 
 
 #p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
 p<-ggarrange(ggarrange(p1,
-                 ggarrange(p2,p2a,nrow=2,labels=c("B.","C."),label.x=0.1),ncol=2,widths=c(3,1)),
-              ggarrange(ph1, p3,nrow=1,ncol=2,labels=c("D.","E.")),nrow=2,heights=c(4,4), labels=c("A."))
+                 ggarrange(p2,p2a,nrow=2,labels=c("B ","C "),label.x=0.1),ncol=2,widths=c(3,1)),
+              ggarrange(ph1, p3,nrow=1,ncol=2,labels=c("D ","E "),widths=c(1.5,2)),nrow=2,heights=c(4,4), labels=c("A "))
 
 
 # p<-ggarrange(p1,
@@ -318,9 +331,11 @@ p<-ggarrange(ggarrange(p1,
 #                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
 #              nrow=2,labels=c("A."),heights=c(4,4))
 
+#ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
+
 ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=10,height=10)
 
-
+ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 
 
