@@ -115,8 +115,20 @@ dd2<-sig %>% dplyr::filter(padj<localPadj) %>%
   dplyr::group_by(SMC,upVdown,XvA) %>%
   dplyr::summarise(ecd15=ecdf(abs(log2FoldChange))(c(0.15)),
                    ecd50=ecdf(abs(log2FoldChange))(c(0.5)),
-                   q2=100*(ecd50-ecd15))
+                   q2=100*(ecd50-ecd15),
+                   count=n())
 dd2[order(dd2$q2),]
+
+sig %>% dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::group_by(SMC,upVdown) %>%
+  dplyr::summarise(count=n())
+
+sig %>% dplyr::group_by(SMC) %>% dplyr::mutate(allGenes=n()) %>%
+  dplyr::group_by(SMC) %>%
+  dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::summarise(count=n(),allGenes=allGenes) %>%
+  dplyr::distinct() %>% dplyr::mutate(pc=100*count/allGenes)
+
 
 # to get total expressed genes
 na.omit(sig) %>% group_by(SMC,XvA) %>% summarise(count=n())

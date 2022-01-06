@@ -343,74 +343,87 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
 ##################-
 ## venn diagrams------
 ##################-
+
+kramer<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds")))
+
+localPadj=0.05
+localLFC=0.5
+
+
+filterList<-list()
+filterList[["Cycling_Meeuse"]]<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T, stringsAsFactors=F)$wormbaseID #3739
+filterList[["Cycling_Latorre"]]<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"))$wormbaseID #3235
+toFilter<-unique(unlist(filterList))
+
+idx<-kramer$wormbaseID %in% toFilter
+kramer<-kramer[!idx,]
+
 eulerLabelsType=c("counts")
-numGenes<-list()
-## upregulated genes -----
-sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-  sigTables[[grp]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                        namePadjCol="padj",
-                        nameLfcCol="log2FoldChange",
-                        direction="gt",
-                        chr="all", nameChrCol="chr"))
+uglyNames<-c("sdc-3AID","dpy-26cs","sdc-3AIDdpy-26cs")
+plotList<-list()
+for (grp in 1:length(groupsOI)){
+  salmon<-data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[groupsOI[grp]]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  ###############################-
+  ## chrX-----
+  ###############################-
+
+  kramerDpy27<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy27_RNAi_L3_padj",
+                                   nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="chrX", nameChrCol="seqnames", outPath=".")
+
+  kramerDpy21<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy21_mutant_L3_padj",
+                                   nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="chrX", nameChrCol="seqnames")
+
+  salmondc<-getSignificantGenes(salmon,padjVal,lfcVal,direction="both",chr="chrX")
+
+
+  DC<-list(salmon=salmondc$wormbaseID, dpy27=kramerDpy27$wormbaseID,
+           dpy21=kramerDpy21$wormbaseID)
+  names(DC)<-c(uglyNames[grp], "dpy-27 (Kramer 2015)", "dpy-21 (Kramer 2015)")
+
+  fit<-euler(DC)
+
+  plotList[[paste(groupsOI[grp],"_","chrX")]]<-plot(fit, quantities=list(type=eulerLabelsType),
+           main="chrX",labels=list(font=4))
+
+  ###############################-
+  ## Autosomes-----
+  ###############################-
+
+  kramerDpy27<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy27_RNAi_L3_padj",
+                                   nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="autosomes", nameChrCol="seqnames", outPath=".")
+
+  kramerDpy21<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy21_mutant_L3_padj",
+                                   nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="autosomes", nameChrCol="seqnames")
+
+  salmondc<-getSignificantGenes(salmon,padjVal,lfcVal,direction="both",chr="autosomes")
+
+
+  DC<-list(salmon=salmondc$wormbaseID, dpy27=kramerDpy27$wormbaseID,
+           dpy21=kramerDpy21$wormbaseID)
+  names(DC)<-c(uglyNames[grp], "dpy-27 (Kramer 2015)", "dpy-21 (Kramer 2015)")
+
+  fit<-euler(DC)
+
+  plotList[[paste(groupsOI[grp],"_","Autosomes")]]<-plot(fit,
+                                          quantities=list(type=eulerLabelsType),
+                                          main="Autosomes",labels=list(font=4))
 }
 
-plotTitle<-list(label="Autosomal up",fontsize=8)
-achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[[","wormbaseID")
-numGenes["Aup"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3a<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3a)
-
-
-plotTitle<-list(label="chrX up",fontsize=8)
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr,"[[","wormbaseID")
-numGenes["Xup"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3c<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3c)
-
-
-## downregulated genes -----
-sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-
-  sigTables[[grp]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc= -lfcVal,
-                        namePadjCol="padj",
-                        nameLfcCol="log2FoldChange",
-                        direction="lt",
-                        chr="all", nameChrCol="chr"))
-}
-
-plotTitle<-list(label="Autosomal down",fontsize=8)
-achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[[","wormbaseID")
-numGenes["Adown"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3e<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3e)
-
-
-plotTitle<-list(label="chrX down",fontsize=8)
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[[","wormbaseID")
-numGenes["Xdown"]<-sum(sapply(sigGenes,length))
-fit<-euler(sigGenes)
-p3g<-plot(fit, quantities=list(type=eulerLabelsType),
-          main=plotTitle)
-#print(p3g)
-
-p4<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
-
+p4<-ggarrange(plotlist=plotList[c(1,3,5,2,4,6)],ncol=3,nrow=2)
+#p4
 
 
 # ###################-
@@ -472,10 +485,11 @@ p4<-ggarrange(p3a,p3c,p3e,p3g,ncol=2,nrow=2)
 
 ############### Final assembly #########
 
-p<-ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B ")),p3,
-          ncol=2,widths=c(2,1),labels=c("","C "))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=8)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=8)
+p<-ggarrange(ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B ")),p3,
+          ncol=2,widths=c(2,1),labels=c("","C ")),
+          p4,nrow=2,heights=c(2,1),labels=c("","D "))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=11)
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=11)
 
 
 
