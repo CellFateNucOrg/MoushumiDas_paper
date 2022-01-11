@@ -7,6 +7,7 @@ library(rtracklayer)
 library(GenomicRanges)
 library(ggpubr)
 library(Cairo)
+library(BSgenome.Celegans.UCSC.ce11)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -35,6 +36,25 @@ groupsOI<-useContrasts
 
 source(paste0(workDir,"/functions.R"))
 
+##############
+
+contrastsOIall<-c("wt.TIR1.sdc3deg.X_1mM_vs_0mM","X.wt.wt.0mM_dpy26cs_vs_wt",
+               "X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt","X.wt.wt.0mM_kle2cs_vs_wt",
+               "X.wt.wt.0mM_scc16cs_vs_wt","X.wt.wt.0mM_coh1cs_vs_wt",
+               "X.wt.wt.0mM_scc1coh1cs_vs_wt")
+useContrastsAll<-c("aux_sdc3bg","dpy26","sdc3dpy26","kle2","scc1","coh1","scc1coh1")
+
+prettyNamesAll<-c(substitute(italic(x^AID),list(x="sdc-3")),
+                  substitute(italic(x^cs),list(x="dpy-26")),
+                  substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")),
+               substitute(italic(x^cs),list(x="kle-2")),
+               substitute(italic(x^cs),list(x="scc-1")),
+               substitute(italic(x^cs),list(x="coh-1")),
+               substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
+
+names(contrastsOIall)<-useContrastsAll
+
+
 
 
 # panel cdf of lfc
@@ -45,51 +65,51 @@ fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefi
 outPath=paste0(workDir)
 
 
-# ########################-
-# ## ECDF of data -----
-# ########################-
-#
-# # using automatic filtering threshold
-# sigTables<-list()
-# localPadj=padjVal
-# localLFC=0
-# for (grp in groupsOI){
-#   print(grp)
-#   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
-#   salmon<-salmon[!is.na(salmon$padj),]
-#   #nrow(filterResults(salmon,padj=0.05,lfc= -0.5,direction="lt",chr="autosomes"))
-#   print(paste0(nrow(salmon)," genes before filtering"))
-#   print(paste0(sum(is.na(salmon$padj))," have padj that is NA"))
-#   #salmon$expressed<-sum(salmon$baseMean>10)
-#   sigTables[[grp]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
-#   print(paste0(nrow(sigTables[[grp]])," genes after automatic threshold filter"))
-# }
-#
-# SMC<-rep(names(sigTables),lapply(sigTables,nrow))
-# sig<-do.call(rbind,sigTables)
-# sig$SMCpretty<-factor(SMC,levels=useContrasts,labels=prettyNames)
-# sig$SMC<-factor(SMC,levels=useContrasts)
-# table(sig$SMC)
-# sig$XvA<-ifelse(sig$chr=="chrX","chrX","Autosomes")
-# #sig$XvA[sig$chr=="chrX"]<-"chrX"
-# #sig$XvA<-factor(sig$XvA)
-# table(sig$XvA)
-# sig$upVdown[sig$log2FoldChange<0]<-"down"
-# sig$upVdown[sig$log2FoldChange>0]<-"up"
-# sig$upVdown<-factor(sig$upVdown,levels=c("down","up"))
-# table(sig$upVdown)
-# row.names(sig)<-NULL
-# SMC<-NULL
-#
-# lapply(sigTables,function(x){sum(x$padj<0.05)})
-#
-# options(tibble.width=Inf)
-# dd1<-sig %>% dplyr::filter(padj<localPadj) %>%
-#   dplyr::group_by(SMC,upVdown,XvA) %>%
-#   dplyr::mutate(ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
-#
-# dd1$upVdown<-relevel(dd1$upVdown,"up")
-#
+########################-
+## ECDF of data -----
+########################-
+
+# using automatic filtering threshold
+sigTables<-list()
+localPadj=padjVal
+localLFC=0
+for (grp in groupsOI){
+  print(grp)
+  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-salmon[!is.na(salmon$padj),]
+  #nrow(filterResults(salmon,padj=0.05,lfc= -0.5,direction="lt",chr="autosomes"))
+  print(paste0(nrow(salmon)," genes before filtering"))
+  print(paste0(sum(is.na(salmon$padj))," have padj that is NA"))
+  #salmon$expressed<-sum(salmon$baseMean>10)
+  sigTables[[grp]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
+  print(paste0(nrow(sigTables[[grp]])," genes after automatic threshold filter"))
+}
+
+SMC<-rep(names(sigTables),lapply(sigTables,nrow))
+sig<-do.call(rbind,sigTables)
+sig$SMCpretty<-factor(SMC,levels=useContrasts,labels=prettyNames)
+sig$SMC<-factor(SMC,levels=useContrasts)
+table(sig$SMC)
+sig$XvA<-ifelse(sig$chr=="chrX","chrX","Autosomes")
+#sig$XvA[sig$chr=="chrX"]<-"chrX"
+#sig$XvA<-factor(sig$XvA)
+table(sig$XvA)
+sig$upVdown[sig$log2FoldChange<0]<-"down"
+sig$upVdown[sig$log2FoldChange>0]<-"up"
+sig$upVdown<-factor(sig$upVdown,levels=c("down","up"))
+table(sig$upVdown)
+row.names(sig)<-NULL
+SMC<-NULL
+
+lapply(sigTables,function(x){sum(x$padj<0.05)})
+
+options(tibble.width=Inf)
+dd1<-sig %>% dplyr::filter(padj<localPadj) %>%
+  dplyr::group_by(SMC,upVdown,XvA) %>%
+  dplyr::mutate(ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
+
+dd1$upVdown<-relevel(dd1$upVdown,"up")
+
 # p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMCpretty,linetype=XvA)) +
 #   geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
 #   theme_classic() + xlim(c(0,1.5)) +
@@ -105,40 +125,60 @@ outPath=paste0(workDir)
 #   theme(strip.text = element_text(size = 12), axis.text=element_text(size=12),
 #         axis.title=element_text(size=12))
 # #p1
-#
-# # to get fraction between 0.15 and 0.5 lfc
-# dd2<-sig %>% dplyr::filter(padj<localPadj) %>%
-#   dplyr::group_by(SMC,upVdown,XvA) %>%
-#   dplyr::summarise(ecd15=ecdf(abs(log2FoldChange))(c(0.15)),
-#                    ecd50=ecdf(abs(log2FoldChange))(c(0.5)),
-#                    q2=100*(ecd50-ecd15))
-# dd2[order(dd2$q2),]
-#
-# # to get total expressed genes
-# na.omit(sig) %>% group_by(SMC,XvA) %>% summarise(count=n())
-#
-# # to add tables of number of signifcant genes to plot
-# ttu<-with(sig[sig$padj<localPadj & sig$upVdown=="up",],table(XvA,SMC))
-# ttu<-pivot_wider(as.data.frame(ttu),names_from=SMC,values_from=Freq)
-# names(ttu)<-gsub("XvA","",names(ttu))
-#
-# ttd<-with(sig[sig$padj<localPadj & sig$upVdown=="down",],table(XvA,SMC))
-# ttd<-pivot_wider(as.data.frame(ttd),names_from=SMC,values_from=Freq)
-# names(ttd)<-gsub("XvA","",names(ttd))
-#
-# tbs<-list("up"=ttu,
-#           "down"=ttd)
-#
-# df <- tibble(x = rep(1.5, 2),
-#              y = rep(0, 2),
-#              upVdown= c("up","down"),
-#              tbl = tbs)
-#
-# p1<-p1 + geom_table(data = df, aes(x = x, y = y,label = tbl),parse=T,
-#                 table.theme = ttheme_gtlight)
-#
-# #p1
 
+# to get fraction between 0.15 and 0.5 lfc
+dd2<-sig %>% dplyr::filter(padj<localPadj) %>%
+  dplyr::group_by(SMC,upVdown,XvA) %>%
+  dplyr::summarise(ecd15=ecdf(abs(log2FoldChange))(c(0.15)),
+                   ecd50=ecdf(abs(log2FoldChange))(c(0.5)),
+                   q2=100*(ecd50-ecd15))
+dd2[order(dd2$q2),]
+
+# to get total expressed genes
+na.omit(sig) %>% group_by(SMC,XvA) %>% summarise(count=n())
+
+sig %>% dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::group_by(SMC,upVdown) %>%
+  dplyr::summarise(count=n())
+
+sig %>% dplyr::group_by(SMC) %>% dplyr::mutate(allGenes=n()) %>%
+  dplyr::group_by(SMC) %>%
+  dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::summarise(count=n(),allGenes=allGenes) %>%
+  dplyr::distinct() %>% dplyr::mutate(pc=100*count/allGenes)
+
+sig %>% dplyr::group_by(SMC,XvA) %>% dplyr::mutate(allGenes=n()) %>%
+  dplyr::group_by(SMC,XvA,upVdown) %>%
+  dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::summarise(count=n(),allGenes=allGenes) %>%
+  dplyr::distinct() %>% dplyr::mutate(pc=100*count/allGenes)
+
+
+forTtest<-sig %>% dplyr::filter(SMC=="aux_sdc3bg")
+forTtest %>% dplyr::group_by(XvA) %>% dplyr::summarise(avr=mean(log2FoldChange))
+
+t.test(forTtest$log2FoldChange~forTtest$XvA)
+
+
+forFisher<-sig %>% dplyr::filter(SMC=="aux_sdc3bg",padj<0.05,abs(log2FoldChange)>0.5)
+ff<-forFisher %>% dplyr::group_by(XvA,upVdown) %>% dplyr::summarise(avr=n())
+ff
+
+fisher.test(matrix(c(ff$avr),nrow=2,byrow=F))
+
+forTtest<-sig %>% dplyr::filter(SMC=="dpy26")
+forTtest %>% dplyr::group_by(XvA) %>% dplyr::summarise(avr=mean(log2FoldChange))
+
+forTtest<-sig %>% dplyr::filter(SMC=="sdc3dpy26")
+forTtest %>% dplyr::group_by(XvA) %>% dplyr::summarise(avr=mean(log2FoldChange))
+
+t.test(forTtest$log2FoldChange~forTtest$XvA)
+
+forFisher<-sig %>% dplyr::filter(SMC=="sdc3dpy26",padj<0.05,abs(log2FoldChange)>0.5)
+ff<-forFisher %>% dplyr::group_by(XvA,upVdown,.drop=F) %>% dplyr::summarise(avr=n())
+ff
+
+fisher.test(matrix(c(ff$avr),nrow=2,byrow=F))
 
 
 ##################-
@@ -480,6 +520,143 @@ p4<-ggarrange(plotlist=plotList[c(1,3,5,2,4,6)],ncol=3,nrow=2)
 #   geom_bar(position=position_dodge(),stat="identity") +
 #   facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
 #   scale_fill_grey() + ggtitle("Fraction of autosomal genes per compartment that significantly change")
+
+
+# ##########################-
+# ## Manual clicked loops------
+# ##########################-
+#
+# ### new clicked loops
+# #clickedBatch="366"
+# clickedBatch="382"
+#
+# loopsOrAnchors<-"anchors"
+# ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
+#
+# if(loopsOrAnchors=="loops"){
+#   loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
+#   grl<-zipup(loops)
+#   anchor1<-do.call(c,lapply(grl,"[",1))
+#   anchor2<-do.call(c,lapply(grl,"[",2))
+#   mcols(anchor1)<-mcols(loops)
+#   mcols(anchor2)<-mcols(loops)
+#
+#   anchor1$loopNum<-paste0("loop",1:length(anchor1))
+#   anchor2$loopNum<-paste0("loop",1:length(anchor2))
+#   anchors<-sort(c(anchor1,anchor2))
+#
+#   #separate anchors from inside tads
+#   tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+#   # tads_in<-reduce(tads_in)
+#   tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+#
+#   ol<-findOverlaps(ceTiles,tads_in)
+#   tenkbInTads<-ceTiles[unique(queryHits(ol))]
+#
+#   anchors<-resize(anchors,width=10000,fix="center")
+#   reduce(anchors)
+#
+#   ol<-findOverlaps(tenkbInTads,anchors)
+#   tenkbInTads<-tenkbInTads[-queryHits(ol)]
+# } else {
+#   anchors<-import(paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
+#   anchors<-resize(anchors,width=10000,fix="center")
+#   ol<-findOverlaps(ceTiles,anchors)
+#   tenkbInTads<-ceTiles[-queryHits(ol)]
+# }
+#
+#
+#
+# width(tenkbInTads)
+# width(anchors)
+# dataList<-list()
+# #grp=useContrasts[3]
+# statList<-list()
+# set.seed(34091857)
+# for (grp in useContrastsAll){
+#   salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+#                                      contrastsOIall[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#
+#   salmongr<-sort(salmongr)
+#
+#   ol<-findOverlaps(salmongr,tenkbInTads,type="any",minoverlap=100L)
+#   insideTads<-salmongr[unique(queryHits(ol))]
+#
+#   ol<-findOverlaps(salmongr,anchors,type="any",minoverlap=100L)
+#   atAnchors<-salmongr[unique(queryHits(ol))]
+#
+#   ol<-findOverlaps(insideTads,atAnchors)
+#   insideTads<-insideTads[-queryHits(ol)]
+# #  bsAvr<-list()
+# #  for(i in 1:10000){
+# #    idx<-sample(1:length(insideTads),length(atAnchors))
+# #    bsAvr<-c(bsAvr,mean(insideTads$log2FoldChange[idx]))
+# #  }
+# #  statList[[grp]]<-sum(unlist(bsAvr)>mean(atAnchors$log2FoldChange))/10000
+#   insideTads$Loops<-"Non Anchor"
+#   atAnchors$Loops<-"Anchor"
+#
+#
+#   df<-data.frame(c(insideTads,atAnchors))
+#   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+#   df$SMC<-grp
+#
+#   dataList[[grp]]<-df
+# }
+#
+#
+#
+# #pvalsDiff<-1-unlist(statList)
+# #names(pvalsDiff)<-prettyNamesAll
+#
+# #aux_sdc3bg      dpy26  sdc3dpy26       kle2       scc1       coh1   scc1coh1
+# #0.8653     0.0001     0.0013     0.3441     0.3545     0.1655     0.2047
+#
+# ## focus on chrX loops
+# dataTbl<-do.call(rbind,dataList)
+# xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+# cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
+#   filter(SMC=="dpy26")
+#
+# xchr$SMC<-factor(xchr$SMC,levels=useContrastsAll,labels=prettyNamesAll)
+#
+# p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#   #geom_jitter()+
+#   facet_grid(col=vars(SMC),labeller=label_parsed) +ylim(c(-0.5,1.5))+
+#   ggtitle(paste0("LFC near ",clickedBatch," loop anchors (",
+#                  cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and inside loops (",
+#                  cntTbl$count[cntTbl$Loops=="Inside loop"]," genes) in chrX")) +
+#   geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#                                  panel.grid.major=element_blank(),
+#                                  panel.grid.minor=element_blank())+
+#   #scale_fill_discrete(c("darkgreen","darkblue"),labeller=label_parsed)+
+#   xlab(label=element_blank()) +
+#   ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Inside loop")),
+#                         map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
+#                         textsize=3,margin_top=0)
+#
+# p1
+# #xchr$SMC<-factor(xchr$SMC,levels=useContrastsAll,labels=prettyNamesAll)
+# xchr$measure="Expression"
+#
+# bm<- xchr%>%distinct(wormbaseID,baseMean,measure)
+# p2<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
+#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+#   facet_wrap(.~measure) + ggtitle("Base mean counts") + theme_bw()+
+#   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
+#         panel.grid.major=element_blank(),
+#         panel.grid.minor=element_blank()) +
+#   xlab(label=element_blank()) + ylab("Log2(base mean counts)")
+#
+# p<-ggarrange(p2,p1,ncol=2,widths=c(1.3,8.7))
+
+
+
 
 
 

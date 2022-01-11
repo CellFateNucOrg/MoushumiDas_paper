@@ -7,6 +7,7 @@ library(rtracklayer)
 library(GenomicRanges)
 library(ggpubr)
 library(Cairo)
+library(BSgenome.Celegans.UCSC.ce11)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -129,6 +130,11 @@ sig %>% dplyr::group_by(SMC) %>% dplyr::mutate(allGenes=n()) %>%
   dplyr::summarise(count=n(),allGenes=allGenes) %>%
   dplyr::distinct() %>% dplyr::mutate(pc=100*count/allGenes)
 
+sig %>% dplyr::group_by(SMC,XvA) %>% dplyr::mutate(allGenes=n()) %>%
+  dplyr::group_by(SMC,XvA,upVdown) %>%
+  dplyr::filter(padj<localPadj,abs(log2FoldChange)>0.5) %>%
+  dplyr::summarise(count=n(),allGenes=allGenes) %>%
+  dplyr::distinct() %>% dplyr::mutate(pc=100*count/allGenes)
 
 # to get total expressed genes
 na.omit(sig) %>% group_by(SMC,XvA) %>% summarise(count=n())
@@ -508,6 +514,254 @@ p5<-ggarrange(plotlist=plotList,ncol=3,nrow=2)
 #
 
 
+##########################-
+## Manual clicked loops------
+##########################-
+
+### new clicked loops
+#clickedBatch="366"
+clickedBatch="382"
+
+loopsOrAnchors<-"anchors"
+ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
+
+if(loopsOrAnchors=="loops"){
+  loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
+  grl<-zipup(loops)
+  anchor1<-do.call(c,lapply(grl,"[",1))
+  anchor2<-do.call(c,lapply(grl,"[",2))
+  mcols(anchor1)<-mcols(loops)
+  mcols(anchor2)<-mcols(loops)
+
+  anchor1$loopNum<-paste0("loop",1:length(anchor1))
+  anchor2$loopNum<-paste0("loop",1:length(anchor2))
+  anchors<-sort(c(anchor1,anchor2))
+
+  #separate anchors from inside tads
+  tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+  # tads_in<-reduce(tads_in)
+  tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+
+  ol<-findOverlaps(ceTiles,tads_in)
+  tenkbInTads<-ceTiles[unique(queryHits(ol))]
+
+  anchors<-resize(anchors,width=10000,fix="center")
+  reduce(anchors)
+
+  ol<-findOverlaps(tenkbInTads,anchors)
+  tenkbInTads<-tenkbInTads[-queryHits(ol)]
+} else {
+  anchors<-import(paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
+  anchors<-resize(anchors,width=10000,fix="center")
+  ol<-findOverlaps(ceTiles,anchors)
+  tenkbInTads<-ceTiles[-queryHits(ol)]
+}
+
+
+
+width(tenkbInTads)
+width(anchors)
+dataList<-list()
+#grp=useContrasts[3]
+statList<-list()
+set.seed(34091857)
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tenkbInTads,type="any",minoverlap=100L)
+  insideTads<-salmongr[unique(queryHits(ol))]
+
+  ol<-findOverlaps(salmongr,anchors,type="any",minoverlap=100L)
+  atAnchors<-salmongr[unique(queryHits(ol))]
+
+  ol<-findOverlaps(insideTads,atAnchors)
+  insideTads<-insideTads[-queryHits(ol)]
+  #  bsAvr<-list()
+  #  for(i in 1:10000){
+  #    idx<-sample(1:length(insideTads),length(atAnchors))
+  #    bsAvr<-c(bsAvr,mean(insideTads$log2FoldChange[idx]))
+  #  }
+  #  statList[[grp]]<-sum(unlist(bsAvr)>mean(atAnchors$log2FoldChange))/10000
+  insideTads$Loops<-"Not anchor"
+  atAnchors$Loops<-"Anchor"
+
+
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+  df$SMC<-grp
+
+  dataList[[grp]]<-df
+}
+
+
+
+#pvalsDiff<-1-unlist(statList)
+#names(pvalsDiff)<-prettyNamesAll
+
+#aux_sdc3bg      dpy26  sdc3dpy26       kle2       scc1       coh1   scc1coh1
+#0.8653     0.0001     0.0013     0.3441     0.3545     0.1655     0.2047
+
+## focus on chrX loops
+dataTbl<-do.call(rbind,dataList)
+xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
+  filter(SMC=="dpy26")
+
+xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
+
+p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  #geom_jitter()+
+  facet_grid(col=vars(SMC),labeller=label_parsed) +ylim(c(-0.5,1.5))+
+  ggtitle(paste0("LFC near ",clickedBatch," loop anchors (",
+                 cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and inside loops (",
+                 cntTbl$count[cntTbl$Loops=="Not anchor"]," genes) in chrX")) +
+  geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
+  theme(axis.text.x=element_text(angle=45,hjust=1),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.title=element_text(size=10))+
+  #scale_fill_discrete(c("darkgreen","darkblue"),labeller=label_parsed)+
+  xlab(label=element_blank()) + ylab("Log2(fold change)")+
+  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
+                        map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
+                        textsize=3,margin_top=0)
+
+p6a
+
+xchr$measure="Expression"
+bm<- xchr %>% distinct(wormbaseID,baseMean,measure)
+p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ ylim(c(-4,20)) +
+  theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +
+  xlab(label=element_blank()) + ylab("Log2(base mean counts)")+
+  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
+                        map_signif_level = F,tip_length=0.001,vjust=-0.1,
+                        textsize=3,margin_top=0.1)
+
+p6<-ggarrange(p6b,p6a,ncol=2,widths=c(1.3,8.7))
+
+p6
+
+#################-
+## plot length vs basal expression --------
+#################-
+chrSubset="autosomes"
+localPadj=0.05
+localLFC=0
+grp=useContrasts[1]
+listTbls<-list()
+for(grp in useContrasts){
+  salmon<-data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  sig<-getSignificantGenes(salmon, padj=localPadj, lfc=localLFC,
+                           namePadjCol="padj",
+                           nameLfcCol="log2FoldChange",
+                           direction="both",
+                           chr=chrSubset, nameChrCol="chr")
+  sig$geneLength<-sig$end-sig$start
+  sig$upVdown<-factor(ifelse(sig$log2FoldChange>0,"up","down"))
+  sig$SMC<-grp
+  listTbls[[grp]]<-sig
+}
+
+
+allSig<-do.call(rbind,listTbls)
+allSig$SMC<-factor(allSig$SMC,levels=useContrasts,labels=prettyNames)
+p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
+  geom_point(size=0.4) +
+  scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
+                        high=scales::muted("#0000ff55"), na.value="#ffffff22",
+                        limits=c(-0.5,0.5),oob=scales::squish,name="Log2FC")+
+  facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
+  ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
+  theme(legend.position = "bottom", plot.title = element_text(size=12)) +
+  xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")
+p7a
+
+
+uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
+
+allSig$lengthBin<-cut(allSig$geneLength,quantile(uniqGenes$geneLength,seq(0,1,0.1)),
+                      dig.lab=0,ordered_result=T,right=T,include.lowest=T)
+
+
+labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$lengthBin) ))),
+                 upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$lengthBin) ))))
+
+levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
+#allSig[is.na(allSig$lengthBin),]
+p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
+  facet_grid(rows=vars(SMC),labeller=label_parsed) + theme_bw() +
+  scale_fill_manual(values=c(scales::muted("red"),scales::muted("blue")),name="Log2FC") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
+  ylab("Fraction of genes up & down regulated") + xlab("Gene length (bp)") +
+  ggtitle(paste0(" "))
+
+
+# chrSubset="chrX"
+# localPadj=0.05
+# localLFC=0
+# grp=useContrasts[1]
+# listTbls<-list()
+# for(grp in useContrasts){
+#   salmon<-data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#   sig<-getSignificantGenes(salmon, padj=localPadj, lfc=localLFC,
+#                            namePadjCol="padj",
+#                            nameLfcCol="log2FoldChange",
+#                            direction="both",
+#                            chr=chrSubset, nameChrCol="chr")
+#   sig$geneLength<-sig$end-sig$start
+#   sig$upVdown<-factor(ifelse(sig$log2FoldChange>0,"up","down"))
+#   sig$SMC<-grp
+#   listTbls[[grp]]<-sig
+# }
+#
+#
+# allSig<-do.call(rbind,listTbls)
+# allSig$SMC<-factor(allSig$SMC,levels=useContrasts,labels=prettyNames)
+# p7c<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
+#   geom_point(size=0.4) +
+#   scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
+#                         high=scales::muted("#0000ff55"), na.value="#ffffff22",
+#                         limits=c(-1,1),oob=scales::squish,name="Log2FC")+
+#   facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
+#   ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
+#   theme(legend.position = "bottom",plot.title = element_text(size=12)) +
+#   xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")
+# p7c
+#
+#
+# uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
+#
+# allSig$lengthBin<-cut(allSig$geneLength,quantile(uniqGenes$geneLength,seq(0,1,0.1)),
+#                       dig.lab=0,ordered_result=T,right=T,include.lowest=T)
+#
+#
+# labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$lengthBin) ))),
+#                  upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$lengthBin) ))))
+#
+# levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
+# #allSig[is.na(allSig$lengthBin),]
+# p7d<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
+#   facet_grid(rows=vars(SMC),labeller=label_parsed) + theme_bw() +
+#   scale_fill_manual(values=c(scales::muted("red"),scales::muted("blue")),name="Log2FC") +
+#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
+#   ylab("Fraction of genes up & down regulated") + xlab("Gene length (bp)") +
+#   ggtitle(paste0(" "))
+#p7d
+
+
+
+
+
 ############### Final assembly #########
 
 p<-ggarrange(p1,p2,p5,nrow=3,heights=c(2.5,1.5,3),labels=c("A ","B ","C "))
@@ -519,3 +773,10 @@ p<-ggarrange(p3,p4,nullp,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=8,height=11)
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=8,height=11)
 
+# p<-ggarrange(ggarrange(p6a,p6b,ncol=2,widths=c(3,1.5), labels=c("A ","B ")),
+#               ggarrange(p6c,p6d,ncol=2,widths=c(3,1.5), labels=c("C ","D ")),nrow=2)
+
+p<-ggarrange(p6a,p6b,ncol=2,widths=c(3,1.5), labels=c("A ","B "))
+
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.pdf"),p,device="pdf",width=21,height=29.7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.png"),p,device="png",width=21,height=29.7,units="cm")
