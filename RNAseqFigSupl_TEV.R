@@ -647,7 +647,7 @@ p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
                         textsize=3,margin_top=0.1)
 
-p6<-ggarrange(p6b,p6a,ncol=2,widths=c(1.3,8.7))
+p6<-ggarrange(p6b,p6a,ncol=2,widths=c(1.8,8.7))
 
 p6
 
