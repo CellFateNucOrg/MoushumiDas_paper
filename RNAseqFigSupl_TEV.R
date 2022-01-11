@@ -624,8 +624,8 @@ p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
                  cntTbl$count[cntTbl$Loops=="Not anchor"]," genes) in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
   theme(axis.text.x=element_text(angle=45,hjust=1),
-        panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.title=element_text(size=10))+
+        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        plot.title=element_text(size=10), legend.title = element_blank())+
   #scale_fill_discrete(c("darkgreen","darkblue"),labeller=label_parsed)+
   xlab(label=element_blank()) + ylab("Log2(fold change)")+
   ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
@@ -769,7 +769,7 @@ ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=8,h
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.png"),p,device="png",width=8,height=11)
 
 nullp<-NULL
-p<-ggarrange(p3,p4,nullp,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
+p<-ggarrange(p3,p4,p6,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=8,height=11)
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=8,height=11)
 
