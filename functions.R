@@ -133,13 +133,15 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
   ol$queryHits<-ol$queryHits
   pcaScore<-ol %>% group_by(queryHits)%>% dplyr::summarise(pcaScore=mean(subjectScore,na.rm=T))
 
-  gr$pcaScore[pcaScore$queryHits]<-pcaScore$pcaScore
-  gr$compartment<-as.factor(ifelse(gr$pcaScore>0,"B","A"))
-  idx<-is.na(gr$pcaScore)
+  mcols(gr)[,paste0(pcaName,"_score")]<-NA
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-NA
+  mcols(gr)[,paste0(pcaName,"_score")][pcaScore$queryHits]<-pcaScore$pcaScore
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-as.factor(ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0,"A","B"))
+  idx<-is.na(mcols(gr)[,paste0(pcaName,"_score")])
   print(paste0(sum(idx)," genes have no overlapping PCA bin"))
   gr<-gr[! idx ]
   forBG<-gr
-  forBG$score<-ifelse(forBG$compartment=="A",1,-1)
+  forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,-1)
   if(!(is.null(grName) | is.null(pcaName))){
     export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
                             "__Compartments_",pcaName, ".bedGraph"),
@@ -147,7 +149,6 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
   }
   return(gr)
 }
-
 
 
 

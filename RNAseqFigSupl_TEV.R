@@ -520,7 +520,7 @@ p5<-ggarrange(plotlist=plotList,ncol=3,nrow=2)
 
 ### new clicked loops
 #clickedBatch="366"
-clickedBatch="382"
+#clickedBatch="382"
 
 loopsOrAnchors<-"anchors"
 ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
@@ -555,6 +555,7 @@ if(loopsOrAnchors=="loops"){
   anchors<-resize(anchors,width=10000,fix="center")
   ol<-findOverlaps(ceTiles,anchors)
   tenkbInTads<-ceTiles[-queryHits(ol)]
+  clickedBatch="382"
 }
 
 
@@ -758,6 +759,103 @@ p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
 #   ggtitle(paste0(" "))
 #p7d
 
+#' ####-
+#' ## AB compartment by chromosome 366-----
+#' ####-
+#'
+#' ####### Supplementary functions---------------
+#'
+#' #' Collect counts of significantly changed genes per chromosome and per compartment
+#' #'
+#' #' @param listgr List of GRanges for different RNAseq with PCA data in mcols
+#' #' @param namePCAcol Name of PCA column in the listgr object
+#' #' @param padjVal adjusted p value to use as threshold
+#' #' @param lfcVal Log2 fold change value to use as threshold
+#' #' @result Table of significant genes with significant up and down regulated genes
+#' #' counted by chromosome for each sample
+#' #' @export
+#' processCountsPerChr<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0.5){
+#'   # genes that change significantly
+#'   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+#'                   padj=padjVal,lfc=lfcVal,direction="both")
+#'
+#'   # count genes by category (chr & A/B)
+#'   dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames, get(namePCAcol)) %>% tally()})
+#'   bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% dplyr::group_by(seqnames,get(namePCAcol)) %>% tally()})
+#'   # add name of SMC protein
+#'   dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
+#'   bgCount<-do.call(rbind, mapply(cbind,bgCount,"SMC"=names(bgCount),SIMPLIFY=F))
+#'   names(dfl)<-c("seqnames",namePCAcol,"n","SMC")
+#'   names(bgCount)<-c("seqnames",namePCAcol,"n","SMC")
+#'   dfl$seqnames<-gsub("chr","",dfl$seqnames)
+#'   bgCount$seqnames<-gsub("chr","",bgCount$seqnames)
+#'
+#'   # do left join to make sure dfl has all the categories required
+#'   dfl<-left_join(bgCount,dfl,by=c("seqnames",namePCAcol,"SMC"),suffix=c("_total",""))
+#'   dfl$n[is.na(dfl$n)]<-0
+#'   dfl$Frac<-dfl$n/dfl$n_total
+#'   return(dfl)
+#' }
+#'
+#'
+#' #' Plot fractions of significantly changed genes per chromosome and per compartment
+#' #'
+#' #' @param df Data frame with fractions of significant genes per chromosome and compartment
+#' #' @param namePCAcol Name of PCA column in the df object
+#' #' @param padjVal Name of eigen vector to use in plot title
+#' #' @result Plot of significant genes with significant changed genes
+#' #' counted by chromosome for each sample presented as fraction
+#' #' @export
+#' plotFractionPerChrPerCompartment<-function(df,namePCAcol,namePCA){
+#'   p<-ggplot(df,aes(x=seqnames,y=Frac,group=get(namePCAcol))) +
+#'     geom_bar(stat="identity", position=position_dodge(),aes(fill=get(namePCAcol))) +
+#'     facet_grid(cols=vars(SMC),labeller=label_parsed) +
+#'     theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+#'     xlab("chr")+ylab("Fraction of genes") +
+#'     #ggtitle(paste0("Fraction changed genes per chromosome by ",namePCA," compartment")) +
+#'     labs(fill=namePCA)
+#'   return(p)
+#' }
+#'
+#'
+#' ####
+#' ## 366 compartments
+#' ####
+#' pca1<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E1.vecs.bw"))
+#' pca2<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E2.vecs.bw"))
+#'
+#' grp<-useContrasts[1]
+#' listgr<-NULL
+#' for (grp in useContrasts){
+#'   #grp=useContrasts[1]
+#'   salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+#'                 contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#'
+#'   salmon<-salmon[!is.na(salmon$chr),]
+#'   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#'
+#'   salmongr<-sort(salmongr)
+#'
+#'   salmongr<-assignGRtoAB(salmongr,pca1,pcaName="E1")
+#'   salmongr<-assignGRtoAB(salmongr,pca2,pcaName="E2")
+#'   listgr[[grp]]<-salmongr
+#' }
+#'
+#' pcaSource="366"
+#'
+#' ### 366 first Eigenvector ------
+#' dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
+#' dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
+#' p8a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
+#' p8a
+#'
+#' ### 366 second eigenvector ------
+#' dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
+#' dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
+#' p8b<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
+#' p8b
+#'
+#' p8<-ggpubr::ggarrange(p8a,p8b,ncol=2,nrow=1)
 
 
 
@@ -765,18 +863,25 @@ p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
 ############### Final assembly #########
 
 p<-ggarrange(p1,p2,p5,nrow=3,heights=c(2.5,1.5,3),labels=c("A ","B ","C "))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=8,height=11)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.png"),p,device="png",width=8,height=11)
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S5", size = 14)) #face=bold
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=21,height=29.7,
+       unit="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.png"),p,device="png",width=21,height=29.7,
+       unit="cm",bg="white")
 
-nullp<-NULL
+#nullp<-NULL
 p<-ggarrange(p3,p4,p6,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=8,height=11)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=8,height=11)
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S6", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=21,height=29.7,
+       unit="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=21,height=29.7,
+       unit="cm",bg="white")
 
 # p<-ggarrange(ggarrange(p6a,p6b,ncol=2,widths=c(3,1.5), labels=c("A ","B ")),
 #               ggarrange(p6c,p6d,ncol=2,widths=c(3,1.5), labels=c("C ","D ")),nrow=2)
 
-p<-ggarrange(p6a,p6b,ncol=2,widths=c(3,1.5), labels=c("A ","B "))
-
+p<-ggarrange(p7a,p7b,ncol=2,widths=c(3,1.5), labels=c("A ","B "))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S8", size = 14))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.pdf"),p,device="pdf",width=21,height=29.7,units="cm")
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.png"),p,device="png",width=21,height=29.7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.png"),p,device="png",width=21,height=29.7,units="cm",bg="white")
+

@@ -323,7 +323,8 @@ geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
 
 geneTable<-na.omit(geneTable)
 allContrasts<-NULL
-contrastNm<-NULL
+#contrastNm<-NULL
+contrastNames<-c()
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
@@ -665,8 +666,9 @@ p4<-ggarrange(plotlist=plotList[c(1,3,5,2,4,6)],ncol=3,nrow=2)
 p<-ggarrange(ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B ")),p3,
           ncol=2,widths=c(2,1),labels=c("","C ")),
           p4,nrow=2,heights=c(2,1),labels=c("","D "))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S10", size = 14))
 ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=11)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=11)
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=11,bg="white")
 
 
 
