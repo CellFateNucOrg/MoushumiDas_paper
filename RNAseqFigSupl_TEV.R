@@ -76,7 +76,7 @@ table(sig$SMC)
 sig$XvA<-ifelse(sig$chr=="chrX","chrX","Autosomes")
 #sig$XvA[sig$chr=="chrX"]<-"chrX"
 #sig$XvA<-factor(sig$XvA)
-table(sig$XvA)
+table(sig$XvA,sig$SMC)
 sig$upVdown[sig$log2FoldChange<0]<-"down"
 sig$upVdown[sig$log2FoldChange>0]<-"up"
 sig$upVdown<-factor(sig$upVdown)
@@ -616,6 +616,11 @@ cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 
+c1<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% summarize(count=n())
+c2<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
+
+c2$count/c1$count
+
 p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
   #geom_jitter()+
@@ -629,7 +634,7 @@ p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
         plot.title=element_text(size=10), legend.title = element_blank())+
   #scale_fill_discrete(c("darkgreen","darkblue"),labeller=label_parsed)+
   xlab(label=element_blank()) + ylab("Log2(fold change)")+
-  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
+  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
                         textsize=3,margin_top=0)
 
@@ -644,7 +649,7 @@ p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +
   xlab(label=element_blank()) + ylab("Log2(base mean counts)")+
-  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
+  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
                         textsize=3,margin_top=0.1)
 
