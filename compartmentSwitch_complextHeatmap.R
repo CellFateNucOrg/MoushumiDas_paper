@@ -442,13 +442,13 @@ bwFiles<-data.frame(filePaths=paste0(evansPath,"/",
                                       rep(c("_1","_2"),3)))
 
 
-pcas<-data.frame(SMC=c("N2","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                 strain =c("N2","366","822","382","775","784","828"),
+pcas<-data.frame(SMC=c("TEVonly","dpy26","kle2","scc1","coh1"),
+                 strain =c("366","382","775","784","828"),
                  E1=NA, E2=NA)
 
-refPCAs<-c("N2","TEVonly")
-otherPCAs<-c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
-prettyOtherPCAs<-c("sdc-3AID","dpy-26cs","kle-2cs","scc-1cs","coh-1cs")
+refPCAs<-c("TEVonly")
+otherPCAs<-c("dpy26","kle2","scc1","coh1")
+prettyOtherPCAs<-c("dpy-26cs","kle-2cs","scc-1cs","coh-1cs")
 
 pcaPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/otherData"
 E1files=list.files(paste0(pcaPath),
@@ -469,7 +469,7 @@ rnaLFC<-data.frame(filePaths=paste0(rnaseqLFCpath,"/",
 
 
 #listdf<-NULL
-refset=refPCAs[2]
+refset=refPCAs[1]
 ref1<-readRDS(paste0(pcaPath,"/",pcas$E1[pcas$SMC==refset]))
 #bedClrEigenBin(ref1,"TEVonly_E1")
 ref2<-readRDS(paste0(pcaPath,"/",pcas$E2[pcas$SMC==refset]))
@@ -550,7 +550,7 @@ typesOIwb3<-c( "snoRNA", "nc_primary_transcript","circular_ncRNA" , "pseudogenic
                "regulatory_region")
 
 #listdf<-NULL
-refset=refPCAs[2]
+refset=refPCAs[1]
 featureTypePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/tracks"
 bins<-readRDS(paste0(pcaPath,"/",pcas$E1[pcas$SMC==refset]))
 mcols(bins)<-NULL
@@ -613,15 +613,18 @@ for(i in 1:length(E1chrom)){
 }
 for(i in 1:length(E1feat)){
   ComplexHeatmap::draw(E1feat[[i]],gap = unit(c(3), "mm"),
-       column_title=paste0("Das et al., Figure S4\n",names(E1feat)[i]),"\n")
+       column_title=paste0("Das et al., Figure S4\n",names(E1feat)[i],"\n"),
+  column_title_gp = gpar(fontsize = 13))
 }
 for(i in 1:length(E2chrom)){
   ComplexHeatmap::draw(E2chrom[[i]],gap = unit(c(3), "mm"),
-       column_title=paste0("Das et al., Figure S4\n",names(E2chrom)[i],"\n"))
-}
+       column_title=paste0("Das et al., Figure S4\n",names(E2chrom)[i],"\n"),
+       column_title_gp = gpar(fontsize = 13))
+  }
 for(i in 1:length(E2feat)){
   ComplexHeatmap::draw(E2feat[[i]],gap = unit(c(3), "mm"),
-       column_title=paste0("Das et al., Figure S4\n",names(E2feat)[i],"\n"))
+       column_title=paste0("Das et al., Figure S4\n",names(E2chrom)[i],"\n"),
+       column_title_gp = gpar(fontsize = 13))
 }
 dev.off()
 
