@@ -27,8 +27,8 @@ prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
 #plot(1:100,main=prettyNames[[5]])
 
 prettyNames1<-c("dpy-26^cs","kle-2^cs","scc-1^cs","coh-1^cs","scc-1^(cs)coh-1^cs")
-
-
+complexes<-c("condensinI/I^DC", "condensinII", "cohesin^(SCC-1)","cohesin^(COH-1)","cohesins")
+names(complexes)<-useContrasts
 
 names(contrastsOI)<-useContrasts
 # strains<-c("366","382","775","784","828","844")
@@ -71,6 +71,7 @@ for (grp in groupsOI){
 upPerChr<-lapply(sigTables, "[", ,"chr")
 upPerChr<-as.data.frame(do.call(rbind,lapply(upPerChr,table)))
 upPerChr$SMC<-rownames(upPerChr)
+upPerChr$complexes<-complexes[upPerChr$SMC]
 upPerChr<-upPerChr %>% gather(colnames(upPerChr)[1:6],key=chr, value=genes)
 upPerChr$chr<-gsub("chr","",upPerChr$chr)
 upPerChr$direction<-"up"
@@ -93,6 +94,7 @@ for (grp in groupsOI){
 downPerChr<-lapply(sigTables, "[", ,"chr")
 downPerChr<-as.data.frame(do.call(rbind,lapply(downPerChr,table)))
 downPerChr$SMC<-rownames(downPerChr)
+downPerChr$complexes<-complexes[downPerChr$SMC]
 downPerChr<-downPerChr %>% gather(colnames(downPerChr)[1:6],key=chr, value=genes)
 downPerChr$chr<-gsub("chr","",downPerChr$chr)
 downPerChr$direction<-"down"
@@ -109,7 +111,7 @@ base.plot <- function(data) {
   p <- ggplot(data, aes(x=chr, y=genes, group=SMC)) + facet_grid(cols=vars(SMC))
   p <- p + theme_bw()
   p <- p + theme(legend.position="bottom", panel.grid.major = element_blank(),
-                 panel.grid.minor = element_blank(),)
+                 panel.grid.minor = element_blank())
   p <- p + geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
                     show.legend = FALSE)
   p <- p + scale_fill_grey(start=0.8, end=0.4)
@@ -127,12 +129,13 @@ step<-150
 breaks<-seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step)
 labels<-abs(seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step))
 
+facetLabels<-sigPerChr %>% select(SMC,chr,complexes) %>% distinct()
 
 p1  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
   facet_grid(direction~SMC,scales="free",space="free",
              labeller=label_parsed) + theme_bw() +
   theme(legend.position="bottom", panel.grid.major = element_blank(),
-  panel.grid.minor = element_blank(), strip.text = element_text(size = 12),
+  panel.grid.minor = element_blank(), strip.text = element_text(size = 10),
   #strip.text.x=element_text(face="italic"),
   axis.text=element_text(size=12), axis.title=element_text(size=12)) +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
@@ -142,8 +145,8 @@ p1  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
                             expand = expansion(add = c(70, 70))) +
   geom_text(aes(label=abs(genes)),
                   vjust=ifelse(sign(sigPerChr$genes)>0,-0.2,1.2), color="black",
-          position = position_dodge(0.9), size=3)
-
+          position = position_dodge(0.9), size=2.7) +
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=3.5,y=870,size=3,hjust=0.5)
 
 
 
@@ -307,17 +310,18 @@ allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=
 p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
   facet_wrap(vars(contrast),nrow=2,labeller=label_parsed)+
   geom_point(col="#11111155",size=1) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+  coord_cartesian(xlim=c(minScale,maxScale),ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 12) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
         legend.position="right", strip.text.x = element_text(size = 12)) +
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
-                   cor.coef.name = c("R"), output.type = "text")+
+                   cor.coef.name = c("R"), output.type = "text",
+                   label.x=minScale+0.5, label.y=maxScale-0.5)+
   xlab(label=element_blank()) + ylab(label=element_blank())
 
-
+p3
 #p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
 #             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
@@ -332,10 +336,11 @@ p<-ggarrange(ggarrange(p1,
 #              nrow=2,labels=c("A."),heights=c(4,4))
 
 #ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 4", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=21,height=21,units="cm")
 
-ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=10,height=10)
-
-ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
+ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=21,height=21,units="cm",
+       bg="white")
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 
 

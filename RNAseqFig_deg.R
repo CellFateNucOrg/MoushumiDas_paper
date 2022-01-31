@@ -84,8 +84,8 @@ p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.position="none")+
-  ylim(c(-0.5,1)) + scale_fill_grey(start=0.8, end=0.4)+
-  geom_hline(yintercept=0,linetype="dotted",col="grey40")+
+  coord_cartesian(ylim=c(-0.5,1.4)) + scale_fill_grey(start=0.8, end=0.4)+
+  geom_hline(yintercept=0,linetype="dashed",col="red")+
   xlab("Chromosome") +ylab("Log2(Fold Change)")
 
 
@@ -265,7 +265,7 @@ allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=
 p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   facet_wrap(.~contrast,nrow=2,labeller=label_parsed)+
   geom_point(size=1,alpha=0.4) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+  coord_cartesian(xlim=c(minScale,maxScale), ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
         legend.position="bottom", strip.text.x = element_text(size = 9)) +
@@ -281,29 +281,29 @@ p3
 
 
 
-#p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
-#             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
-# p<-ggarrange(ggarrange(p1,ggarrange(p2,p2a,nrow=1,ncol=2,labels=c("Autosomes","chrX")),
-#                        nrow=2,ncol=1,heights=c(2,1),labels=c("A. ","B. ")),
-#              ph1,ncol=2,widths=c(3,1),labels=c("","C. "))
 pnull<-NULL
 
 p<-ggarrange(p1,ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1),
                           labels=c("","Autosomes","chrX","")),
-             ph1,ncol=3,widths=c(2,0.8,1),labels=c("A ","B ","C "))
+             ph1,ncol=3,widths=c(2,0.8,1),labels=c("B ","C ","D "))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
 
-# p<-ggarrange(p1,
-#             ggarrange(ggarrange(p2,p2a,nrow=2,labels=c("B.","C."), label.x=0.1),
-#                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
-#              nrow=2,labels=c("A."),heights=c(4,4))
-
-#ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=11,height=5)
-ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=11,height=5)
-
+ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=21,height=10,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=21,height=10,units="cm",bg="white")
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 
-
+# p<-ggarrange(pnull,p1,
+#              ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1),
+#                           labels=c("","Autosomes","chrX","")),
+#              ph1,pnull, pnull,ncol=2,nrow=3,widths=c(0.5,0.5),
+#              heights=c(1,1.5,1.5),
+#              labels=c("A ","B ","C ","D ","E ","F "))
+# p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
+# p
+#
+# ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=13,height=27,units="cm")
+# ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=13,height=27,units="cm",bg="white")
 
 
 

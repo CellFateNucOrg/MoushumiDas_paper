@@ -134,19 +134,22 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
   pcaScore<-ol %>% group_by(queryHits)%>% dplyr::summarise(pcaScore=mean(subjectScore,na.rm=T))
 
   mcols(gr)[,paste0(pcaName,"_score")]<-NA
-  mcols(gr)[,paste0(pcaName,"_compartment")]<-NA
   mcols(gr)[,paste0(pcaName,"_score")][pcaScore$queryHits]<-pcaScore$pcaScore
-  mcols(gr)[,paste0(pcaName,"_compartment")]<-as.factor(ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0,"A","B"))
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0,"A","0")
+  Bidx<-mcols(gr)[,paste0(pcaName,"_score")]<0
+  mcols(gr)[Bidx,paste0(pcaName,"_compartment")]<-"B"
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-factor(mcols(gr)[,paste0(pcaName,"_compartment")],levels=c("A","B","0"))
   idx<-is.na(mcols(gr)[,paste0(pcaName,"_score")])
   print(paste0(sum(idx)," genes have no overlapping PCA bin"))
   gr<-gr[! idx ]
-  forBG<-gr
-  forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,-1)
-  if(!(is.null(grName) | is.null(pcaName))){
-    export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
-                            "__Compartments_",pcaName, ".bedGraph"),
-           format="bedGraph")
-  }
+  #forBG<-gr
+  #forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,0)
+  #forBG$score[mcols(gr)[,paste0(pcaName,"_compartment")]=="B"]<-"B"
+  #if(!(is.null(grName) | is.null(pcaName))){
+  #  export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
+  #                          "__Compartments_",pcaName, ".bedGraph"),
+  #         format="bedGraph")
+  #}
   return(gr)
 }
 
@@ -454,7 +457,7 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
   allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
   p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) +
     ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
-    ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
+    ggplot2::coord_cartesian(ylim=quantile(allavrbins$value,c(0.01,0.99)))+
     ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
     ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
     ggplot2::theme_bw()+

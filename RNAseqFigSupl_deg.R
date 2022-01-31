@@ -23,7 +23,6 @@ prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
                substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
 
-
 names(contrastsOI)<-useContrasts
 # strains<-c("366","382","775","784","828","844")
 # strain<-factor(strains,levels=strains)
@@ -112,7 +111,7 @@ dd1$upVdown<-relevel(dd1$upVdown,"up")
 
 # p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMCpretty,linetype=XvA)) +
 #   geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
-#   theme_classic() + xlim(c(0,1.5)) +
+#   theme_classic() + coord_cartesian(xlim=c(0,1.5)) +
 #   scale_color_discrete(labels = ggplot2:::parse_safe(levels(dd1$SMCpretty)))+
 #   xlab("Absolute log2 fold change")+ylab("Fraction of significant genes")
 # #p
@@ -182,7 +181,7 @@ fisher.test(matrix(c(ff$avr),nrow=2,byrow=F))
 
 
 ##################-
-## boxplot of counts per chr------
+## barplot of counts per chr------
 ##################-
 
 
@@ -317,7 +316,9 @@ lfcCols<-grep("_lfc$",names(geneTable))
 #minScale<-min(geneTable[,lfcCols])*1.05
 #maxScale<-max(geneTable[,lfcCols])*1.05
 minScale<- -2
-maxScale<- 2
+maxScale<- 3
+#minScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.001)*1.05
+#maxScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.999)*1.05
 geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
 #tmp<-geneTable
 
@@ -350,7 +351,7 @@ allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=
 p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   facet_wrap(.~contrast,nrow=3,labeller=label_parsed)+
   geom_point(size=1,alpha=0.4) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+  coord_cartesian(xlim=c(minScale,maxScale), ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, size=0.7,show.legend = T) +
   theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
@@ -361,14 +362,15 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
                    cor.coef.name = c("R"), output.type = "text",
-                   show.legend=F,size=3) +
+                   show.legend=F,size=3,
+                   label.x=minScale+0.1, label.y=c(maxScale-0.1,maxScale-0.5)) +
   xlab(label=element_blank()) + ylab(label=element_blank())
-#p3
+p3
 
 # p4a<-ggplot(allContrasts,aes(x=group1,y=group2)) +
 #   facet_grid(cols=vars(XvA),rows=vars(contrast)) +
 #   geom_point(col="#11111155",size=1) + xlab(NULL) + ylab(NULL) +
-#   xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+#   coord_cartesian(xlim=c(minScale,maxScale), ylim=c(minScale,maxScale)) +
 #   geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw() +
 #   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
 #         axis.text=element_text(size=12), axis.title=element_text(size=12),
@@ -689,8 +691,8 @@ p<-ggarrange(ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B 
           ncol=2,widths=c(2,1),labels=c("","C ")),
           p4,nrow=2,heights=c(2,1),labels=c("","D "))
 p<-annotate_figure(p, top = text_grob("Das et al., Figure S10", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=8,height=11)
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=8,height=11,bg="white")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.pdf"),p,device=cairo_pdf,width=21,height=29.7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1.png"),p,device=png,width=21,height=29.7,,unit="cm",bg="white")
 
 
 

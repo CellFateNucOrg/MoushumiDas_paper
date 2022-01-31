@@ -26,6 +26,9 @@ prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^cs),list(x="coh-1")),
                substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
 
+complexes<-c("condensinI/I^DC", "condensinII", "cohesin^(SCC-1)","cohesin^(COH-1)","cohesins")
+names(complexes)<-useContrasts
+
 names(contrastsOI)<-useContrasts
 # strains<-c("366","382","775","784","828","844")
 # strain<-factor(strains,levels=strains)
@@ -95,7 +98,7 @@ dd1$upVdown<-relevel(dd1$upVdown,"up")
 
 p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMCpretty,linetype=XvA)) +
   geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
-  theme_classic() + xlim(c(0,1.5)) +
+  theme_classic() + coord_cartesian(xlim=c(0,1.5)) +
   scale_color_discrete(labels = ggplot2:::parse_safe(levels(dd1$SMCpretty)),
                        name=element_blank())+
   scale_linetype_discrete(name=element_blank()) +
@@ -179,17 +182,19 @@ allSig<-do.call(rbind,sigTables)
 rownames(allSig)<-NULL
 allSig$chr<-gsub("chr","",allSig$chr)
 allSig$SMC<- factor(allSig$SMC,levels=groupsOI,labels=prettyNames)
-
+allSig$complexes<-complexes[allSig$SMC]
+facetLabels<-allSig %>% select(SMC,chr,complexes) %>% distinct()
 
 p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
-  geom_boxplot(outlier.shape=NA,show.legend=NULL) +
+  geom_boxplot(outlier.shape=NA,show.legend=F) +
   facet_grid(cols=vars(SMC),labeller=label_parsed) + theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())+
-  ylim(c(-0.5,1)) + scale_fill_grey(start=0.8, end=0.4)+
+  coord_cartesian(ylim=c(-0.7,1.5)) + scale_fill_grey(start=0.8, end=0.4)+
   geom_hline(yintercept=0,linetype="dashed",col="red")+
-  xlab("Chromosome") + ylab("Log2(Fold Change)")
-
+  xlab("Chromosome") + ylab("Log2(Fold Change)") +
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=2,y=1.4,size=3.5,hjust=0)
+p2
 # ##################-
 # ## boxplot LFC up/down significant------
 # ##################-
@@ -237,7 +242,7 @@ p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
 # yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 # p2a<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
 #   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-#   facet_grid(cols=vars(XvA)) + ylim(yminmax) +
+#   facet_grid(cols=vars(XvA)) + coord_cartesian(ylim=yminmax) +
 #   ggtitle("Absolute LFC of significantly changed genes by chromosome type") +
 #   theme_minimal() + xlab("")+ ylab("|log2(FC)|")+
 #   scale_fill_brewer(palette="Dark2",labels = ggplot2:::parse_safe(levels(sigTbl$SMC)))
@@ -392,8 +397,11 @@ combnTable<-combn(1:length(groupsOI),m=2)
 lfcCols<-grep("_lfc$",names(geneTable))
 #minScale<-min(geneTable[,lfcCols])*1.05
 #maxScale<-max(geneTable[,lfcCols])*1.05
-minScale<- -2
-maxScale<- 2
+#minScale<- -2
+#maxScale<- 2
+minScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.0001)*1.05
+maxScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.9999)*1.05
+
 geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
 #tmp<-geneTable
 
@@ -426,7 +434,7 @@ allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=
 p4<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   facet_wrap(.~contrast,nrow=2,labeller=label_parsed)+
   geom_point(size=1,alpha=0.4) +
-  xlim(c(minScale,maxScale)) + ylim(c(minScale,maxScale)) +
+  coord_cartesian(xlim=c(minScale,maxScale),ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, size=0.7,show.legend = T) +
   theme_bw(base_size = 10) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
@@ -437,9 +445,10 @@ p4<-ggplot(allContrasts,aes(x=group1,y=group2,col=XvA)) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
                    cor.coef.name = c("R"), output.type = "text",
-                   show.legend=F,size=3) +
+                   show.legend=F,size=3,
+                   label.x=minScale+0.1, label.y=c(maxScale-0.1,maxScale-1))+
   xlab(label=element_blank()) + ylab(label=element_blank())
-#p4
+p4
 
 ###################-
 ## volcano plots------
@@ -455,64 +464,7 @@ for (grp in groupsOI){
 
 plotList[["legend"]]<-plotVolcanoXvA(salmon,addLegend=T)
 p5<-ggarrange(plotlist=plotList,ncol=3,nrow=2)
-
-
-# ###################-
-# ## AB compartments------
-# ###################-
-#
-# pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
-#
-# listgr<-NULL
-# for (grp in groupsOI){
-#   #grp=groupsOI[1]
-#   salmon<-readRDS(file=paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#   salmongr<-sort(salmongr)
-#   salmongr<-assignGRtoAB(salmongr,pca2,pcaName="N2")
-#   salmongr$SMC<-grp
-#   listgr[[grp]]<-salmongr
-# }
-#
-# # genes that change significantly
-# sigList<-lapply(lapply(listgr,data.frame), getSignificantGenes,
-#                 padj=padjVal,lfc=lfcVal,direction="both",chr="autosomes",
-#                 nameChrCol="seqnames")
-#
-# compartmentTable<-do.call(rbind,sigList)
-# compartmentTable$updown<-ifelse(compartmentTable$log2FoldChange>0,"up","down")
-# compartmentTable$updown<-factor(compartmentTable$updown,levels=c("up","down"))
-# #compartmentTable$XvA<-ifelse(compartmentTable$seqnames=="chrX","chrX","Autosomes")
-# compartmentTable$SMC<-factor(compartmentTable$SMC,levels=useContrasts,labels=prettyNames)
-# #table(compartmentTable$updown)
-#
-# p6a<-ggplot(compartmentTable,aes(x=compartment,fill=updown)) + geom_bar(position=position_dodge()) +
-#   facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
-#   scale_fill_grey() + ggtitle("Number of autosomal genes by compartment that significantly change")
-#
-#
-# allList<-lapply(listgr,data.frame)
-# allTable<-do.call(rbind,allList)
-# allTable<-allTable[allTable$seqnames!="chrX",]
-# allTable$updown<-ifelse(allTable$log2FoldChange>0,"up","down")
-# allTable$updown[allTable$log2FoldChange==0]<-NA
-# allTable$updown<-factor(allTable$updown,levels=c("up","down"))
-# #allTable$XvA<-ifelse(allTable$seqnames=="chrX","chrX","Autosomes")
-# allTable$SMC<-factor(allTable$SMC,levels=useContrasts,labels=prettyNames)
-#
-# pergrp<-countPerGroup<-compartmentTable %>% group_by(compartment,updown,SMC) %>% summarize(count=n())
-# all<-allTable %>% group_by(compartment,updown,SMC) %>% summarize(all=n())
-#
-# pergrp<-left_join(pergrp,all)
-# pergrp$fraction<-pergrp$count/pergrp$all
-#
-# p6b<-ggplot(pergrp,aes(x=compartment,y=fraction,fill=updown)) +
-#   geom_bar(position=position_dodge(),stat="identity") +
-#   facet_wrap(.~SMC, labeller=label_parsed) + theme_bw() +
-#   scale_fill_grey() + ggtitle("Fraction of autosomal genes per compartment that significantly change")
-#
-
+p5
 
 ##########################-
 ## Manual clicked loops------
@@ -615,6 +567,8 @@ cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
   filter(SMC=="dpy26")
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
+xchr$complexes<-complexes[xchr$SMC]
+facetLabels<-xchr %>% dplyr::select(SMC,Loops,complexes) %>% distinct()
 
 c1<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% summarize(count=n())
 c2<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
@@ -624,9 +578,9 @@ c2$count/c1$count
 p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
   #geom_jitter()+
-  facet_grid(col=vars(SMC),labeller=label_parsed) +ylim(c(-0.5,1.5))+
+  facet_grid(col=vars(SMC),labeller=label_parsed) +coord_cartesian(ylim=c(-0.5,1.65))+
   ggtitle(paste0("LFC near ",clickedBatch," loop anchors (",
-                 cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and inside loops (",
+                 cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and not at anchors (",
                  cntTbl$count[cntTbl$Loops=="Not anchor"]," genes) in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
   theme(axis.text.x=element_text(angle=45,hjust=1),
@@ -636,7 +590,8 @@ p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   xlab(label=element_blank()) + ylab("Log2(fold change)")+
   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
-                        textsize=3,margin_top=0)
+                        textsize=3,margin_top=0)+
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3.5,hjust=0.5)
 
 p6a
 
@@ -644,7 +599,7 @@ xchr$measure="Expression"
 bm<- xchr %>% distinct(wormbaseID,baseMean,measure)
 p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ ylim(c(-4,20)) +
+  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-4,20)) +
   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +
@@ -681,6 +636,11 @@ for(grp in useContrasts){
 
 allSig<-do.call(rbind,listTbls)
 allSig$SMC<-factor(allSig$SMC,levels=useContrasts,labels=prettyNames)
+allSig$complexes<-complexes[allSig$SMC]
+rownames(allSig)<-NULL
+facetLabels<-allSig %>% select(SMC,complexes) %>% distinct()
+facetLabels$log2FoldChange<-1
+
 p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
   geom_point(size=0.4) +
   scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
@@ -689,7 +649,9 @@ p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)
   facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
   ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
   theme(legend.position = "bottom", plot.title = element_text(size=12)) +
-  xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")
+  xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")+
+  #geom_text(label=allSig$complexes,parse=T,x=7.5,y=15,size=3.5)
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=17,size=3.5,color="black",hjust=0)
 p7a
 
 
@@ -764,103 +726,102 @@ p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
 #   ggtitle(paste0(" "))
 #p7d
 
-#' ####-
-#' ## AB compartment by chromosome 366-----
-#' ####-
+####-
+## AB compartment by chromosome 366-----
+####-
+
+####### Supplementary functions---------------
+
+#' Collect counts of significantly changed genes per chromosome and per compartment
 #'
-#' ####### Supplementary functions---------------
+#' @param listgr List of GRanges for different RNAseq with PCA data in mcols
+#' @param namePCAcol Name of PCA column in the listgr object
+#' @param padjVal adjusted p value to use as threshold
+#' @param lfcVal Log2 fold change value to use as threshold
+#' @result Table of significant genes with significant up and down regulated genes
+#' counted by chromosome for each sample
+#' @export
+processCountsPerChr<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0.5){
+  # genes that change significantly
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="both")
+
+  # count genes by category (chr & A/B)
+  dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames, get(namePCAcol)) %>% tally()})
+  bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% dplyr::group_by(seqnames,get(namePCAcol)) %>% tally()})
+  # add name of SMC protein
+  dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
+  bgCount<-do.call(rbind, mapply(cbind,bgCount,"SMC"=names(bgCount),SIMPLIFY=F))
+  names(dfl)<-c("seqnames",namePCAcol,"n","SMC")
+  names(bgCount)<-c("seqnames",namePCAcol,"n","SMC")
+  dfl$seqnames<-gsub("chr","",dfl$seqnames)
+  bgCount$seqnames<-gsub("chr","",bgCount$seqnames)
+
+  # do left join to make sure dfl has all the categories required
+  dfl<-left_join(bgCount,dfl,by=c("seqnames",namePCAcol,"SMC"),suffix=c("_total",""))
+  dfl$n[is.na(dfl$n)]<-0
+  dfl$Frac<-dfl$n/dfl$n_total
+  return(dfl)
+}
+
+
+#' Plot fractions of significantly changed genes per chromosome and per compartment
 #'
-#' #' Collect counts of significantly changed genes per chromosome and per compartment
-#' #'
-#' #' @param listgr List of GRanges for different RNAseq with PCA data in mcols
-#' #' @param namePCAcol Name of PCA column in the listgr object
-#' #' @param padjVal adjusted p value to use as threshold
-#' #' @param lfcVal Log2 fold change value to use as threshold
-#' #' @result Table of significant genes with significant up and down regulated genes
-#' #' counted by chromosome for each sample
-#' #' @export
-#' processCountsPerChr<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0.5){
-#'   # genes that change significantly
-#'   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-#'                   padj=padjVal,lfc=lfcVal,direction="both")
-#'
-#'   # count genes by category (chr & A/B)
-#'   dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames, get(namePCAcol)) %>% tally()})
-#'   bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% dplyr::group_by(seqnames,get(namePCAcol)) %>% tally()})
-#'   # add name of SMC protein
-#'   dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
-#'   bgCount<-do.call(rbind, mapply(cbind,bgCount,"SMC"=names(bgCount),SIMPLIFY=F))
-#'   names(dfl)<-c("seqnames",namePCAcol,"n","SMC")
-#'   names(bgCount)<-c("seqnames",namePCAcol,"n","SMC")
-#'   dfl$seqnames<-gsub("chr","",dfl$seqnames)
-#'   bgCount$seqnames<-gsub("chr","",bgCount$seqnames)
-#'
-#'   # do left join to make sure dfl has all the categories required
-#'   dfl<-left_join(bgCount,dfl,by=c("seqnames",namePCAcol,"SMC"),suffix=c("_total",""))
-#'   dfl$n[is.na(dfl$n)]<-0
-#'   dfl$Frac<-dfl$n/dfl$n_total
-#'   return(dfl)
-#' }
-#'
-#'
-#' #' Plot fractions of significantly changed genes per chromosome and per compartment
-#' #'
-#' #' @param df Data frame with fractions of significant genes per chromosome and compartment
-#' #' @param namePCAcol Name of PCA column in the df object
-#' #' @param padjVal Name of eigen vector to use in plot title
-#' #' @result Plot of significant genes with significant changed genes
-#' #' counted by chromosome for each sample presented as fraction
-#' #' @export
-#' plotFractionPerChrPerCompartment<-function(df,namePCAcol,namePCA){
-#'   p<-ggplot(df,aes(x=seqnames,y=Frac,group=get(namePCAcol))) +
-#'     geom_bar(stat="identity", position=position_dodge(),aes(fill=get(namePCAcol))) +
-#'     facet_grid(cols=vars(SMC),labeller=label_parsed) +
-#'     theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-#'     xlab("chr")+ylab("Fraction of genes") +
-#'     #ggtitle(paste0("Fraction changed genes per chromosome by ",namePCA," compartment")) +
-#'     labs(fill=namePCA)
-#'   return(p)
-#' }
-#'
-#'
-#' ####
-#' ## 366 compartments
-#' ####
-#' pca1<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E1.vecs.bw"))
-#' pca2<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E2.vecs.bw"))
-#'
-#' grp<-useContrasts[1]
-#' listgr<-NULL
-#' for (grp in useContrasts){
-#'   #grp=useContrasts[1]
-#'   salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
-#'                 contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#'
-#'   salmon<-salmon[!is.na(salmon$chr),]
-#'   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#'
-#'   salmongr<-sort(salmongr)
-#'
-#'   salmongr<-assignGRtoAB(salmongr,pca1,pcaName="E1")
-#'   salmongr<-assignGRtoAB(salmongr,pca2,pcaName="E2")
-#'   listgr[[grp]]<-salmongr
-#' }
-#'
-#' pcaSource="366"
-#'
-#' ### 366 first Eigenvector ------
-#' dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
-#' dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
-#' p8a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
-#' p8a
-#'
-#' ### 366 second eigenvector ------
-#' dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
-#' dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
-#' p8b<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
-#' p8b
-#'
-#' p8<-ggpubr::ggarrange(p8a,p8b,ncol=2,nrow=1)
+#' @param df Data frame with fractions of significant genes per chromosome and compartment
+#' @param namePCAcol Name of PCA column in the df object
+#' @param padjVal Name of eigen vector to use in plot title
+#' @result Plot of significant genes with significant changed genes
+#' counted by chromosome for each sample presented as fraction
+#' @export
+plotFractionPerChrPerCompartment<-function(df,namePCAcol,namePCA){
+  p<-ggplot(df,aes(x=seqnames,y=Frac,group=get(namePCAcol))) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=get(namePCAcol))) +
+    facet_grid(cols=vars(SMC),labeller=label_parsed) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Fraction of genes") +
+    #ggtitle(paste0("Fraction changed genes per chromosome by ",namePCA," compartment")) +
+    labs(fill=namePCA)
+  return(p)
+}
+
+
+####
+## 366 compartments -----
+####
+pca1<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E1.vecs.bw"))
+pca2<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E2.vecs.bw"))
+
+listgr<-NULL
+grp=useContrasts[1]
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+                contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  salmongr<-assignGRtoAB(salmongr,pca1,pcaName="E1")
+  salmongr<-assignGRtoAB(salmongr,pca2,pcaName="E2")
+  listgr[[grp]]<-salmongr
+}
+
+pcaSource="366"
+
+### 366 first Eigenvector ------
+dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
+dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
+p8a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
+p8a
+
+### 366 second eigenvector ------
+dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
+dfl$SMC<-factor(dfl$SMC,levels=useContrasts,labels=prettyNames)
+p8b<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
+p8b
+
+p8<-ggpubr::ggarrange(p8a,p8b,ncol=2,nrow=1)
 
 
 
