@@ -287,7 +287,7 @@ pnull<-NULL
 p<-ggarrange(p1,ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1),
                           labels=c("","Autosomes","chrX","")),
              ph1,ncol=3,widths=c(2,0.8,1),labels=c("B ","C ","D "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 4", size = 14))
 
 ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=21,height=10,units="cm")
 ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=21,height=10,units="cm",bg="white")

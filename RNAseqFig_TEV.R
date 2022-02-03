@@ -8,6 +8,8 @@ library(circlize)
 library(fastcluster)
 library(seriation)
 library(gridtext)
+library(rtracklayer)
+library(BSgenome.Celegans.UCSC.ce11)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -42,16 +44,17 @@ groupsOI<-useContrasts
 
 
 source(paste0(workDir,"/functions.R"))
-
-
-###################-
-# panel A numbers of genes per chr-------
-###################-
+# panel cdf of lfc
 lfcVal=0.5
 padjVal=0.05
 filterPrefix<-"filtCycChrAX"
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefix,"_")
 outPath=paste0(workDir)
+
+
+###################-
+# panel A numbers of genes per chr-------
+###################-
 
 ## up regulated count
 sigTables<-list()
@@ -227,7 +230,8 @@ heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("blue","white","red"))
 heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("cyan","black","yellow"))
 
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]), method = "PCA")
-hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
+hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),
+             name="Log2FC",col=heatmapCol,
              row_order = get_order(o1,1), column_order=1:length(useContrasts),
              show_row_names=F,row_title="Autosomes",column_names_rot = 90,
              use_raster=T,raster_quality=1,raster_device="CairoPNG")
@@ -237,14 +241,14 @@ hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), name="NA",
              column_labels=gt_render(prettyNames1,
                                      gp=gpar(fontface="italic", fontsize=12)),
              row_order = get_order(o1,1),  column_order=1:5,
-             show_row_names=F,row_title="chrX",column_names_rot = 90,
+             show_row_names=F,row_title="X",column_names_rot = 90,
              show_heatmap_legend=F, use_raster=T,raster_quality=1,
              raster_device="CairoPNG")
 htlist=hm1 %v% hm2
-ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 20, 2, 20), "mm")))
+ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 5, 2, 5), "mm")))
 pdf(file=paste0(workDir,"/plots/hclustering_TEV.pdf"),width=5,height=8,
     paper="a4")
-draw(htlist,padding= unit(c(2, 2, 2, 2), "mm"))
+draw(htlist,padding= unit(c(2, 0, 2, 0), "mm"))
 dev.off()
 # clustMethod="pearson"
 # hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
@@ -313,7 +317,7 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
   coord_cartesian(xlim=c(minScale,maxScale),ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, size=0.7) + theme_bw(base_size = 12) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        legend.position="right", strip.text.x = element_text(size = 12)) +
+        legend.position="right", strip.text.x = element_text(size = 11)) +
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = ..r.label..), method="pearson",
@@ -322,21 +326,116 @@ p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
   xlab(label=element_blank()) + ylab(label=element_blank())
 
 p3
-#p<-ggarrange(p1,ggarrange(ph1,ggarrange(p2,p2a,nrow=2,labels=c("C.","D."),label.x=0.1),ncol=2),
-#             p3,nrow=3,ncol=1,labels=c("A.","B.","E."),heights=c(4,4,2.5))
 
+
+##########################-
+## Manual clicked loops------
+##########################-
+
+### new clicked loops
+
+ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
+
+anchors<-import(paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
+anchors<-resize(anchors,width=10000,fix="center")
+ol<-findOverlaps(ceTiles,anchors)
+tenkbInTads<-ceTiles[-queryHits(ol)]
+clickedBatch="382"
+
+
+width(tenkbInTads)
+width(anchors)
+dataList<-list()
+#grp=useContrasts[3]
+statList<-list()
+set.seed(34091857)
+for (grp in useContrasts[1]){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/",fileNamePrefix,
+                                     contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tenkbInTads,type="any",minoverlap=100L)
+  insideTads<-salmongr[unique(queryHits(ol))]
+
+  ol<-findOverlaps(salmongr,anchors,type="any",minoverlap=100L)
+  atAnchors<-salmongr[unique(queryHits(ol))]
+
+  ol<-findOverlaps(insideTads,atAnchors)
+  insideTads<-insideTads[-queryHits(ol)]
+  #  bsAvr<-list()
+  #  for(i in 1:10000){
+  #    idx<-sample(1:length(insideTads),length(atAnchors))
+  #    bsAvr<-c(bsAvr,mean(insideTads$log2FoldChange[idx]))
+  #  }
+  #  statList[[grp]]<-sum(unlist(bsAvr)>mean(atAnchors$log2FoldChange))/10000
+  insideTads$Loops<-"Not anchor"
+  atAnchors$Loops<-"Anchor"
+
+
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+  df$SMC<-grp
+
+  dataList[[grp]]<-df
+}
+
+
+
+#pvalsDiff<-1-unlist(statList)
+#names(pvalsDiff)<-prettyNamesAll
+
+#aux_sdc3bg      dpy26  sdc3dpy26       kle2       scc1       coh1   scc1coh1
+#0.8653     0.0001     0.0013     0.3441     0.3545     0.1655     0.2047
+
+## focus on chrX loops
+dataTbl<-do.call(rbind,dataList)
+xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
+  filter(SMC=="dpy26")
+
+xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
+xchr$complexes<-complexes[xchr$SMC]
+facetLabels<-xchr %>% dplyr::select(SMC,Loops,complexes) %>% distinct()
+
+c1<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% summarize(count=n())
+c2<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
+
+c2$count/c1$count
+
+p4<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T,show.legend=F)+
+  facet_grid(col=vars(SMC),labeller=label_parsed) +coord_cartesian(ylim=c(-0.5,1.7))+
+  geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
+  theme(axis.text.x=element_text(angle=45,hjust=1,size=12),
+        axis.text.y=element_text(size=10),
+        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        plot.title=element_text(size=10), legend.title = element_blank(),
+        strip.text.x=element_text(size=12))+
+  xlab(label=element_blank()) +
+  ylab(bquote(Log[2]~FC)) +
+  #scale_y_continuous(labels=c(expression(Log[2]FC)))+
+  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
+                        map_signif_level = F,tip_length=0.001,y_position=1.45,vjust=-0.1,
+                        textsize=3,margin_top=0)+
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3.5,hjust=0.5)
+
+p4
+
+
+############################### Final arrangement ------
 p<-ggarrange(ggarrange(p1,
                  ggarrange(p2,p2a,nrow=2,labels=c("B ","C "),label.x=0.1),ncol=2,widths=c(3,1)),
-              ggarrange(ph1, p3,nrow=1,ncol=2,labels=c("D ","E "),widths=c(1.5,2)),nrow=2,heights=c(4,4), labels=c("A "))
+              ggarrange(ph1, p3,p4,nrow=1,ncol=3,labels=c("D ","E ","F "),widths=c(1.3,2.2,0.9)),nrow=2,heights=c(4,4), labels=c("A "))
 
 
-# p<-ggarrange(p1,
-#             ggarrange(ggarrange(p2,p2a,nrow=2,labels=c("B.","C."), label.x=0.1),
-#                       ph1,p3,ncol=3,labels=c("","D.","E."),widths=c(1.5,1.5,2)),
-#              nrow=2,labels=c("A."),heights=c(4,4))
+
 
 #ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
-p<-annotate_figure(p, top = text_grob("Das et al., Figure 4", size = 14))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
 ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=21,height=21,units="cm")
 
 ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=21,height=21,units="cm",

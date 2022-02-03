@@ -13,86 +13,13 @@ if(!dir.exists(paste0(workDir,"/plots"))) {
   dir.create(paste0(workDir,"/plots"))
 }
 
-###########################-
-# compartments - digitized ----------------------------------------------------
-###########################-
-
-## 366TPM in digitized compartments of different HiCs -----
-
-### Autosomes ------
-RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
-
-if(all(RNAseqAndHiCsubset %in% useContrasts)){
-  pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                   strain =c("N2","366","822","382","775","784","828"),
-                   E1=NA, E2=NA)
-
-  tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
-  cov366<-coverage(tpm366,weight="score")
-
-  E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
-  E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
-  listdf<-NULL
-  for (grp in pcas$SMC){
-    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
-    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
-
-    pca1<-binnedAverage(pca1,cov366,varname="tpm366")
-    pca2<-binnedAverage(pca2,cov366,varname="tpm366")
-
-    df1<-data.frame(pca1)
-    df2<-data.frame(pca2)
-
-    df<-rbind(df1,df2)
-    #df$compartment<-factor(df$compartment)
-    df$SMC<-grp
-
-    listdf[[grp]]<-df
-  }
-
-  df<-do.call(rbind,listdf)
-  df$SMC<-factor(df$SMC,levels=pcas$SMC)
-  df$bin<-factor(df$bin,levels=1:50)
-
-
-  p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
-    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    coord_cartesian(ylim=c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
-    ggtitle(paste0("366 TPM in different ausotomal bins of digitized pca"))
-
-  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
-                           "digitizedCompAll_chrA_366tpm.pdf"),
-         device="pdf",width=29,height=19, units="cm")
-
-  subdf<-df[df$SMC %in% c("wt","TEVonly"),]
-  subdf<-subdf[subdf$bin %in% 1:50,]
-  p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
-    geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-    coord_cartesian(ylim=c(-14,14)) + theme_bw()+
-    #scale_fill_manual(values=c("white","grey70"))+
-    geom_hline(yintercept=0,col="red")+
-    ggtitle(paste0("366 TPM in different autosomal bins of digitized pca")) +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
-  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
-                           "digitizedCompControls_chrA_366tpm.pdf"),
-         device="pdf",width=10,height=12, units="cm")
-
-}
-
+hicFeaturePath="/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
+RNAseqPath="/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas"
 
 
 ##########################-
 # domain sizes -------
 ##########################-
-
-pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                 strain =c("N2","366","822","382","775","784","828"),
-                 E1=NA, E2=NA)
 
 pcas<-data.frame(SMC=c("TEVonly","dpy26"),
                  strain =c("366","382"),
@@ -101,9 +28,9 @@ pcas<-data.frame(SMC=c("TEVonly","dpy26"),
 
 
 
-E1files=list.files(paste0(workDir,"/otherData"),
+E1files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.oriented_E1\\.vecs\\.bw")
-E2files=list.files(paste0(workDir,"/otherData"),
+E2files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.oriented_E2\\.vecs\\.bw")
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
@@ -113,7 +40,7 @@ listdf<-list()
 grp=pcas$SMC[1]
 for (grp in pcas$SMC){
   #pca1<-readRDS(paste0(workDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
-  pca2<-import(paste0(workDir,"/otherData/",pcas$E2[pcas$SMC==grp]))
+  pca2<-import(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
   pca2$AB<-ifelse(pca2$score>0,"A",0)
   pca2$AB[pca2$score<0]<-"B"
@@ -145,7 +72,7 @@ med<-df%>%filter(SMC=="TEVonly") %>% group_by(XvA,AB) %>% summarise(med=median(w
 dfsum<-df %>% group_by(SMC,XvA,AB) %>% summarise(mean=mean(width),median=median(width))
 dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
 
-p<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
+p1<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
   geom_boxplot(outlier.shape=NA,notch=T,varwidth=T) +
   scale_fill_manual(values=c("red","lightblue"))+
   coord_cartesian(ylim = c(0, 65000))+
@@ -154,8 +81,66 @@ p<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
         text = element_text(size = 12))+
   #geom_hline(yintercept=8000) +
   stat_summary(fun="mean",geom="point",shape=8,size=2)
-p
-ggsave(paste0(workDir,"/plots/ABdomainWidth.pdf"),plot=p,height=10,width=9,units="cm")
+p1
+
+
+
+
+
+###########################-
+# compartments - digitized: 366tpm-----
+###########################-
+
+### Autosomes
+
+pcas<-data.frame(SMC=c("TEVonly"),
+                 strain =c("366"),
+                 E1=NA, E2=NA)
+
+tpm366<-import(paste0(RNAseqPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+cov366<-coverage(tpm366,weight="score")
+
+E1files=list.files(paste0(hicFeaturePath,"/otherData"),
+                   pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
+E2files=list.files(paste0(hicFeaturePath,"/otherData"),
+                   pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
+pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
+pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
+listdf<-NULL
+for (grp in pcas$SMC){
+  pca1<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+  pca2<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+  pca1<-binnedAverage(pca1,cov366,varname="tpm366")
+  pca2<-binnedAverage(pca2,cov366,varname="tpm366")
+
+  df1<-data.frame(pca1)
+  df2<-data.frame(pca2)
+
+  df<-rbind(df1,df2)
+  #df$compartment<-factor(df$compartment)
+  df$SMC<-grp
+
+  listdf[[grp]]<-df
+}
+
+df<-do.call(rbind,listdf)
+df$SMC<-factor(df$SMC,levels=pcas$SMC)
+df$bin<-factor(df$bin,levels=1:50)
+
+subdf<-df[df$SMC %in% c("wt","TEVonly"),]
+subdf<-subdf[subdf$bin %in% 1:50,]
+p2<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
+  geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
+  coord_cartesian(ylim=c(-14,14)) + theme_bw()+
+  #scale_fill_manual(values=c("white","grey70"))+
+  geom_hline(yintercept=0,col="black")+
+  ggtitle(paste0("TEV control animals")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
+p2
+
 
 
 
@@ -197,13 +182,13 @@ getStateOLtable<-function(gr,states){
 ############################-
 
 
-pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                 strain =c("N2","366","822","382","775","784","828"),
+pcas<-data.frame(SMC=c("wt","TEVonly"),
+                 strain =c("N2","366"),
                  E1=NA, E2=NA)
 
-E1files=list.files(paste0(workDir,"/otherData"),
+E1files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.saddle_cis_X_noA_E1\\.digitized\\.rds")
-E2files=list.files(paste0(workDir,"/otherData"),
+E2files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_cis_X_noA_E1\\.digitized\\.rds")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")))]
@@ -213,8 +198,8 @@ listdf<-NULL
 
 #grp=pcas$SMC[1]
 for (grp in pcas$SMC){
-  pca1<-readRDS(paste0(workDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
-  pca2<-readRDS(paste0(workDir,"/otherData/",pcas$E2[pcas$SMC==grp]))
+  pca1<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+  pca2<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
   for(binNum in 1:50){
     pca1bin<-pca1[pca1$bin==binNum]
@@ -247,16 +232,13 @@ df$bin<-factor(df$bin,levels=1:50)
 #   theme(legend.position = "none") +
 #   facet_grid(rows=vars(compartment),cols=vars(SMC)) + ggtitle(paste0("Frequency of chrX chromosome states in digitized eigen vector bins"))
 
-p4<-ggplot(df[df$XvA=="X",],aes(x=bin,y=stateWidth,fill=state)) +
+p3<-ggplot(df[df$XvA=="X",],aes(x=bin,y=stateWidth,fill=state)) +
   geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
   theme_bw() +
   theme(legend.position = "none") +
-  facet_grid(rows=vars(compartment),cols=vars(SMC))+ ggtitle(paste0("Number of bp per chrX chromosome state in digitized eigen vector bins"))
+  facet_grid(cols=vars(compartment),rows=vars(SMC))+ ggtitle(paste0("X chromosome"))
 
-p<-ggpubr::ggarrange(p3,p4,ncol=1,nrow=1)
 
-ggpubr::ggexport(p,filename=paste0(workDir,"/plots/states_chrX_digitizedBins.pdf"),
-                 width=15,height=7,units="cm",device="pdf")
 
 
 
@@ -266,13 +248,13 @@ ggpubr::ggexport(p,filename=paste0(workDir,"/plots/states_chrX_digitizedBins.pdf
 ############################-
 
 
-pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                 strain =c("N2","366","822","382","775","784","828"),
+pcas<-data.frame(SMC=c("wt","TEVonly"),
+                 strain =c("N2","366"),
                  E1=NA, E2=NA)
 
-E1files=list.files(paste0(workDir,"/otherData"),
+E1files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
-E2files=list.files(paste0(workDir,"/otherData"),
+E2files=list.files(paste0(hicFeaturePath,"/otherData"),
                    pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
@@ -282,8 +264,8 @@ listdf<-NULL
 
 #grp=pcas$SMC[1]
 for (grp in pcas$SMC){
-  pca1<-readRDS(paste0(workDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
-  pca2<-readRDS(paste0(workDir,"/otherData/",pcas$E2[pcas$SMC==grp]))
+  pca1<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+  pca2<-readRDS(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
   for(binNum in 1:50){
     pca1bin<-pca1[pca1$bin==binNum]
@@ -296,8 +278,8 @@ for (grp in pcas$SMC){
     df1$SMC<-grp
     df2$SMC<-grp
 
-    df1$compartment<-"E1"
-    df2$compartment<-"E2"
+    df1$compartment<-"large (E1)"
+    df2$compartment<-"small (E2)"
 
     listdf[[paste0(grp,"_",binNum)]]<-rbind(df1,df2)
   }
@@ -320,9 +302,6 @@ p4<-ggplot(df[df$XvA!="X",],aes(x=bin,y=stateWidth,fill=state)) +
   geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
   theme_bw() +
   theme(legend.position = "none") +
-  facet_grid(rows=vars(compartment),cols=vars(SMC))+ ggtitle(paste0("Number of bp per autosomal chromosome state in digitized eigen vector bins"))
+  facet_grid(cols=vars(compartment),rows=vars(SMC))+ ggtitle(paste0("Autosomes"))
+p4
 
-p<-ggpubr::ggarrange(p3,p4,ncol=1,nrow=1)
-
-ggpubr::ggexport(p,filename=paste0(workDir,"/plots/states_chrA_digitizedBins.pdf"),
-                 width=15,height=7,units="cm",device="pdf")
