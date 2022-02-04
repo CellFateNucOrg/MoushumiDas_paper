@@ -305,3 +305,6 @@ p4<-ggplot(df[df$XvA!="X",],aes(x=bin,y=stateWidth,fill=state)) +
   facet_grid(cols=vars(compartment),rows=vars(SMC))+ ggtitle(paste0("Autosomes"))
 p4
 
+
+
+
