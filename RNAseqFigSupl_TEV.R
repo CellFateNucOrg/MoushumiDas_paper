@@ -535,15 +535,9 @@ for (grp in useContrasts){
 
   ol<-findOverlaps(insideTads,atAnchors)
   insideTads<-insideTads[-queryHits(ol)]
-  #  bsAvr<-list()
-  #  for(i in 1:10000){
-  #    idx<-sample(1:length(insideTads),length(atAnchors))
-  #    bsAvr<-c(bsAvr,mean(insideTads$log2FoldChange[idx]))
-  #  }
-  #  statList[[grp]]<-sum(unlist(bsAvr)>mean(atAnchors$log2FoldChange))/10000
+
   insideTads$Loops<-"Not anchor"
   atAnchors$Loops<-"Anchor"
-
 
   df<-data.frame(c(insideTads,atAnchors))
   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
@@ -595,11 +589,20 @@ p6a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
 
 p6a
 
-xchr$measure="Expression"
-bm<- xchr %>% distinct(wormbaseID,baseMean,measure)
+
+# #get 366tpm.
+# gr<-GRanges(xchr[xchr$SMC=="italic(\"dpy-26\"^cs)",])
+# seqlevels(gr)<-seqlevels(Celegans)
+# tpm366<-import(paste0(workDir,"/otherData/sumFR_366_B_UniqueMultiple.bw"),
+#                format="bw")
+# tpm366<-ws235toCe11(tpm366)
+# gr$baseMean<-binnedAverage(gr,mcolAsRleList(tpm366,"score"),varname="tpm366",na.rm=T)$tpm366
+# gr$measure="Expression"
+#bm<- data.frame(gr) #%>% distinct(wormbaseID,baseMean,measure)
+bm<- data.frame(xchr) %>% distinct(wormbaseID,baseMean,measure)
 p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-4,20)) +
+  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-12,15)) +
   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +

@@ -43,6 +43,12 @@ getStateOLtable<-function(gr,states){
   return(df)
 }
 
+ws235toCe11<-function(gr){
+  seqlevels(gr)<-c("I","II","III","IV","V","X","MtDNA")
+  seqlevels(gr)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+  seqinfo(gr)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+  return(gr)
+}
 
 ####################-
 # digitized switching --------
@@ -83,7 +89,7 @@ getChromMarks<-function(bins,bwFiles){
     bw<-import.bw(bwFiles$filePaths[bwFiles$shortNames==mark])
     seqlevels(bw)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
     bwcov<-coverage(bw,weight="score")
-    bins<-binnedAverage(bins,numvar=bwcov,varname=mark)
+    bins<-binnedAverage(bins,numvar=bwcov,varname=mark,na.rm=T)
   }
   return(bins)
 }
@@ -463,6 +469,8 @@ rnaseqLFCpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/
 
 rnaTPM<-data.frame(filePaths=paste0(rnaseqTPMpath,"/PMW366_TPM_avr.bw"),
                    shortNames="tpm366")
+# rnaTPM<-data.frame(filePaths=paste0(workDir,"/otherData/sumFR_366_B_UniqueMultiple.bw"),
+#                    shortNames="tpm366")
 rnaLFC<-data.frame(filePaths=paste0(rnaseqLFCpath,"/",
                                     "filtCycChrAX_",otherPCAs,"_lfc.bw"),
                    shortNames=paste0("LFC_",prettyOtherPCAs))
@@ -514,8 +522,8 @@ for (g in 1:length(otherPCAs)){
 
   #listdf[[paste0(grp,"_E1")]]<-E1
   #listdf[[paste0(grp,"_E3")]]<-E2
-  E1chrom[[paste0(prettyGrp,"_E1")]]<-doEigenComplexHeatmap(E1,paste0(prettyGrp,"_E1"),doRaster=T)
-  E2chrom[[paste0(prettyGrp,"_E2")]]<-doEigenComplexHeatmap(E2,paste0(prettyGrp,"_E2"),doRaster=T)
+  E1chrom[[paste0(prettyGrp,"_E1")]]<-doEigenComplexHeatmap(E1,paste0(prettyGrp,"_E1"), doRaster=T)
+  E2chrom[[paste0(prettyGrp,"_E2")]]<-doEigenComplexHeatmap(E2,paste0(prettyGrp,"_E2"), doRaster=T)
 
   if(is.null(statdf)){
     statdf<-rbind(data.frame(SMC=prettyGrp,EigenVector="E1",table(E1$switch)),
