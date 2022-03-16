@@ -48,9 +48,9 @@ getREF <- function(genome) {
 }
 
 assignInNamespace("getREF",getREF,ns="seqplots")
-#####################
+#####################-
 
-## DCC subunits and kleisins -----
+# DCC subunits and kleisins -----
 
 bwFiles<-paste0(hicFeaturePath,"/publicData/",c("DPY27_N2_L3_average_ce11.bw",
                                          "GSE87741_DPY30_N2_MxEmb_MACS141_e5_average_ce11.bw",

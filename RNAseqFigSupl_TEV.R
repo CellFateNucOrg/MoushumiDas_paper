@@ -729,6 +729,72 @@ p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
 #   ggtitle(paste0(" "))
 #p7d
 
+
+#################-
+## plot length vs 366 TPM --------
+#################-
+chrSubset="autosomes"
+localPadj=0.05
+localLFC=0
+grp=useContrasts[1]
+listTbls<-list()
+for(grp in useContrasts){
+  salmon<-data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  sig<-getSignificantGenes(salmon, padj=localPadj, lfc=localLFC,
+                           namePadjCol="padj",
+                           nameLfcCol="log2FoldChange",
+                           direction="both",
+                           chr=chrSubset, nameChrCol="chr")
+  sig$geneLength<-sig$end-sig$start
+  sig$upVdown<-factor(ifelse(sig$log2FoldChange>0,"up","down"))
+  sig$SMC<-grp
+  listTbls[[grp]]<-sig
+}
+
+
+allSig<-do.call(rbind,listTbls)
+allSig$SMC<-factor(allSig$SMC,levels=useContrasts,labels=prettyNames)
+allSig$complexes<-complexes[allSig$SMC]
+rownames(allSig)<-NULL
+facetLabels<-allSig %>% select(SMC,complexes) %>% distinct()
+facetLabels$log2FoldChange<-1
+
+p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
+  geom_point(size=0.4) +
+  scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
+                        high=scales::muted("#0000ff55"), na.value="#ffffff22",
+                        limits=c(-0.5,0.5),oob=scales::squish,name="Log2FC")+
+  facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
+  ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
+  theme(legend.position = "bottom", plot.title = element_text(size=12)) +
+  xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")+
+  #geom_text(label=allSig$complexes,parse=T,x=7.5,y=15,size=3.5)
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=17,size=3.5,color="black",hjust=0)
+p7a
+
+
+uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
+
+allSig$lengthBin<-cut(allSig$geneLength,quantile(uniqGenes$geneLength,seq(0,1,0.1)),
+                      dig.lab=0,ordered_result=T,right=T,include.lowest=T)
+
+
+labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$lengthBin) ))),
+                 upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$lengthBin) ))))
+
+levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
+#allSig[is.na(allSig$lengthBin),]
+p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
+  facet_grid(rows=vars(SMC),labeller=label_parsed) + theme_bw() +
+  scale_fill_manual(values=c(scales::muted("red"),scales::muted("blue")),name="Log2FC") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
+  ylab("Fraction of genes up & down regulated") + xlab("Gene length (bp)") +
+  ggtitle(paste0(" "))
+
+
+
+
+
 ####-
 ## AB compartment by chromosome 366-----
 ####-

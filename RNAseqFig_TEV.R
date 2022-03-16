@@ -154,7 +154,7 @@ p1  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
 
 
 ##################-
-## venn diagram------
+# venn diagram------
 ##################-
 eulerLabelsType=c("counts")
 ## significantly changed genes
@@ -263,7 +263,7 @@ dev.off()
 
 
 ##################-
-## Correlation------
+# Correlation------
 ##################-
 
 geneTable<-NULL
@@ -329,7 +329,7 @@ p3
 
 
 ##########################-
-## Manual clicked loops------
+# Manual clicked loops------
 ##########################-
 
 ### new clicked loops

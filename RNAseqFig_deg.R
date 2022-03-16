@@ -90,7 +90,7 @@ p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
 
 
 ##################-
-## venn diagram------
+# venn diagram------
 ##################-
 eulerLabelsType=c("counts")
 ## significantly changed genes
@@ -214,7 +214,7 @@ dev.off()
 
 
 ##################-
-## Correlation------
+# Correlation------
 ##################-
 
 geneTable<-NULL
@@ -279,8 +279,7 @@ p3
 
 
 
-
-
+# final arrangement
 
 pnull<-NULL
 

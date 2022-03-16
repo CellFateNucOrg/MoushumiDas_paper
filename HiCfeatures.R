@@ -7,6 +7,7 @@ library(tidyr)
 #library(ComplexHeatmap)
 #library(gridExtra)
 #library(gtable)
+library(zoo)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -35,37 +36,78 @@ E2files=list.files(paste0(hicFeaturePath,"/otherData"),
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
 
+mergeAdjacentDomains<-function(pca){
+  pcaA<-pca[pca$AB=="A"]
+  pcaB<-pca[pca$AB=="B"]
+  pca0<-pca[pca$AB==0]
+  pcaA<-reduce(pcaA)
+  pcaB<-reduce(pcaB)
+  pca0<-reduce(pca0)
+  pcaA$AB<-"A"
+  pcaB$AB<-"B"
+  pca0$AB<-0
+  pcamerged<-sort(c(pcaA,pcaB,pca0))
+  return(pcamerged)
+}
+gr<-pca1
+smootheByChr<-function(gr,winWidth=25){
+    grl<-split(gr$score,seqnames(gr))
+    tmpl<-lapply(grl,rollmean,k=winWidth,fill=0)
+    gr$smScore<-unlist(tmpl)
+    return(gr)
+}
+
 
 listdf<-list()
 grp=pcas$SMC[1]
 for (grp in pcas$SMC){
-  #pca1<-readRDS(paste0(workDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
+  pca1<-import(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
   pca2<-import(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
+  pca1<-smootheByChr(pca1,winWidth=50)
+  plot(1:length(pca1),pca1$score,type="l")
+  lines(1:length(pca1),pca1$smScore,type="l",col="red")
+  pca1$AB<-ifelse(pca1$smScore>0,"A",0)
+  pca1$AB[pca1$smScore<0]<-"B"
+  pca1<-mergeAdjacentDomains(pca1)
+  idx<-which(pca1$AB==0)
+  idx<-idx[ifelse(idx[1]==1,2,1):length(idx)] # remove first index if it is 1
+  sameChr<-as.vector(seqnames(pca1)[idx]==seqnames(pca1)[idx-1])
+  pca1$AB[idx[sameChr]]<-pca1$AB[(idx-1)[sameChr]]
+  pca1<-mergeAdjacentDomains(pca1)
+
+  #pca2<-smootheByChr(pca2,winWidth=10)
+  #plot(1:length(pca2),pca2$score,type="l")
+  #lines(1:length(pca2),pca2$smScore,type="l",col="red")
   pca2$AB<-ifelse(pca2$score>0,"A",0)
   pca2$AB[pca2$score<0]<-"B"
-  pca2A<-pca2[pca2$AB=="A"]
-  pca2B<-pca2[pca2$AB=="B"]
-  pca20<-pca2[pca2$AB==0]
-  pca2A<-reduce(pca2A)
-  pca2B<-reduce(pca2B)
-  pca20<-reduce(pca20)
-  pca2A$AB<-"A"
-  pca2B$AB<-"B"
-  pca20$AB<-0
+  idx<-which(pca2$AB==0)
+  sameChr<-as.vector(seqnames(pca2)[idx]==seqnames(pca2)[idx-1])
+  pca2$AB[idx[sameChr]]<-pca2$AB[(idx-1)[sameChr]]
+  pca2<-mergeAdjacentDomains(pca2)
 
-  pca2merged<-sort(c(pca2A,pca2B,pca20))
-  pca2merged$SMC<-grp
-  listdf[[grp]]<-as.data.frame(pca2merged)
+  pca1$SMC<-grp
+  pca2$SMC<-grp
+  pca1$eigen<-"E1"
+  pca2$eigen<-"E2"
+  listdf[[paste0(grp,"_E1")]]<-as.data.frame(pca1)
+  listdf[[paste0(grp,"_E2")]]<-as.data.frame(pca2)
 }
 
-
+lapply(listdf,dim)
 df<-do.call(rbind,listdf)
-df$SMC<-factor(df$SMC,levels=pcas$SMC,labels=pcas$prettyNames)
 row.names(df)<-NULL
 df$XvA<-ifelse(df$seqnames=="chrX","chrX","Autosomes")
+
+saveRDS(df[df$eigen=="E1",],"./otherData/TCcomp_TEVonly&dpy26_100kbSmoothed.RDS")
+saveRDS(df[df$eigen=="E2",],"./otherData/ABcomp_TEVonly&dpy26.RDS")
+df<-df[df$eigen=="E2",]
+
 df$AB<-factor(df$AB,levels=c("A","B"))
 df<-df[!is.na(df$AB),]
+df$SMC<-factor(df$SMC,levels=pcas$SMC,labels=pcas$prettyNames)
+
+#df<-readRDS("./otherData/ABcomp_TEVonly&dpy26.RDS")
 
 med<-df%>%filter(SMC=="TEVonly") %>% group_by(XvA,AB) %>% summarise(med=median(width))
 
@@ -75,17 +117,25 @@ dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
 p1<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
   geom_boxplot(outlier.shape=NA,notch=T,varwidth=T) +
   scale_fill_manual(values=c("red","lightblue"))+
-  coord_cartesian(ylim = c(0, 65000))+
+  coord_cartesian(ylim = c(-1000, 75000))+
   facet_grid(rows=vars(XvA),cols=vars(SMC)) + theme_bw() +
   theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
         text = element_text(size = 12))+
   #geom_hline(yintercept=8000) +
-  stat_summary(fun="mean",geom="point",shape=8,size=2)
+  stat_summary(fun="mean",geom="point",shape=4,size=2)#+
+  #geom_text(data = df %>% group_by(AB, SMC, XvA) %>%
+  #            summarize(Count = n(),width=80000),
+  #          aes(label = paste0("n=", Count)),
+  #          position = position_dodge(0.85), size=3.5, show.legend = FALSE)
 p1
 
+table(df$AB,df$SMC,df$XvA)
 
 
+df1<-df %>% group_by(SMC,XvA,AB,eigen) %>% summarise(averageWidth=mean(width),
+                                                 medianWidth=median(width))
 
+df1$pcAvrIncrease<-df1$averageWidth/df1$averageWidth[1:4]
 
 ###########################-
 # compartments - digitized: 366tpm-----
