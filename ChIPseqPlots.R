@@ -101,10 +101,10 @@ for(anch in 1:nrow(anchordf)){
   dev.off()
 }
 
-# get number for anchors vs flank
+# # get number for anchors vs flank
 # names(bwFiles)<-c("DPY-27_L3","DPY-30_emb","SDC-2_emb","SDC-3_emb",
 #                   "KLE-2_L3","SCC-1_L3")
-# anchors<-import(anchordf$file[3])
+# anchors<-import(anchordf$file[1])
 # seqlevels(anchors)<-seqlevels(Celegans)
 # seqinfo(anchors)<-seqinfo(Celegans)
 # upflank<-flank(anchors, width=100000,start=T,both=F)
@@ -118,17 +118,21 @@ for(anch in 1:nrow(anchordf)){
 # }
 #
 # upstream<-colMeans(data.frame(mcols(upflank)[,names(bwFiles)]))
+# upstream
 # # DPY.27_L3 DPY.30_emb  SDC.2_emb  SDC.3_emb   KLE.2_L3   SCC.1_L3
 # # 0.93885903 0.04579297 0.20761486 0.37697418 0.04563449 1.10044808
 #
 # downstream<-colMeans(data.frame(mcols(downflank)[,names(bwFiles)]))
+# downstream
 # # DPY.27_L3 DPY.30_emb  SDC.2_emb  SDC.3_emb   KLE.2_L3   SCC.1_L3
 # # 0.91662235 0.02374211 0.15455688 0.29675338 0.06287584 1.10569648
 #
 # atanchors<-colMeans(data.frame(mcols(anchors)[,names(bwFiles)]))
+# atanchors
 # # DPY.27_L3 DPY.30_emb  SDC.2_emb  SDC.3_emb   KLE.2_L3   SCC.1_L3
 # # 9.721283   5.464769  13.075006  14.952511   1.405235   2.923475
 #
 # atanchors/(0.5*(upstream+downstream))
 # # DPY.27_L3 DPY.30_emb  SDC.2_emb  SDC.3_emb   KLE.2_L3   SCC.1_L3
 # # 10.478448 157.180196  72.203345  44.387412  25.900476   2.650302
+

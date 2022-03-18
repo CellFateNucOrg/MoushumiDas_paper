@@ -76,15 +76,32 @@ for (grp in pcas$SMC){
   pca1$AB[idx[sameChr]]<-pca1$AB[(idx-1)[sameChr]]
   pca1<-mergeAdjacentDomains(pca1)
 
-  #pca2<-smootheByChr(pca2,winWidth=10)
-  #plot(1:length(pca2),pca2$score,type="l")
-  #lines(1:length(pca2),pca2$smScore,type="l",col="red")
-  pca2$AB<-ifelse(pca2$score>0,"A",0)
-  pca2$AB[pca2$score<0]<-"B"
+  pca2<-smootheByChr(pca2,winWidth=10)
+  pcasave<-pca2
+  pcasave$score<-pcasave$smScore
+  pcasave$smScore<-NULL
+  export.bw(pcasave,"00_smScore.bw")
+  plot(1:length(pca2),pca2$score,type="l")
+  lines(1:length(pca2),pca2$smScore,type="l",col="red")
+  pca2$AB<-ifelse(pca2$smScore>0,"A",0)
+  pca2$AB[pca2$smScore<0]<-"B"
+  pcasave<-pca2
+  pcasave$score<-NULL
+  pcasave$smScore<-NULL
+  names(mcols(pcasave))<-c("name")
+  export.bed(pcasave,"01_calledAB_sm.bed")
+  pca2<-mergeAdjacentDomains(pca2)
+  pcasave<-pca2
+  names(mcols(pcasave))<-c("name")
+  export.bed(pcasave,"02_mergedAdjacent_sm.bed")
   idx<-which(pca2$AB==0)
+  idx<-idx[ifelse(idx[1]==1,2,1):length(idx)] # remove first index if it is 1
   sameChr<-as.vector(seqnames(pca2)[idx]==seqnames(pca2)[idx-1])
   pca2$AB[idx[sameChr]]<-pca2$AB[(idx-1)[sameChr]]
   pca2<-mergeAdjacentDomains(pca2)
+  pcasave<-pca2
+  names(mcols(pcasave))<-c("name")
+  export.bed(pcasave,"03_removed0s_sm.bed")
 
   pca1$SMC<-grp
   pca2$SMC<-grp
@@ -100,7 +117,7 @@ row.names(df)<-NULL
 df$XvA<-ifelse(df$seqnames=="chrX","chrX","Autosomes")
 
 saveRDS(df[df$eigen=="E1",],"./otherData/TCcomp_TEVonly&dpy26_100kbSmoothed.RDS")
-saveRDS(df[df$eigen=="E2",],"./otherData/ABcomp_TEVonly&dpy26.RDS")
+saveRDS(df[df$eigen=="E2",],"./otherData/ABcomp_TEVonly&dpy26_20kbSmoothed.RDS")
 df<-df[df$eigen=="E2",]
 
 df$AB<-factor(df$AB,levels=c("A","B"))
@@ -117,7 +134,7 @@ dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
 p1<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
   geom_boxplot(outlier.shape=NA,notch=T,varwidth=T) +
   scale_fill_manual(values=c("red","lightblue"))+
-  coord_cartesian(ylim = c(-1000, 75000))+
+  coord_cartesian(ylim = c(0, 250000))+
   facet_grid(rows=vars(XvA),cols=vars(SMC)) + theme_bw() +
   theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
         text = element_text(size = 12))+
