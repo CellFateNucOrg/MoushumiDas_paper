@@ -194,7 +194,8 @@ p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
   geom_hline(yintercept=0,linetype="dashed",col="red")+
   xlab("Chromosome") + ylab("Log2(Fold Change)") +
   geom_text(data=facetLabels,aes(label=complexes),parse=T,x=2,y=1.4,size=3.5,hjust=0)
-p2
+#p2
+
 # ##################-
 # ## boxplot LFC up/down significant------
 # ##################-
@@ -594,15 +595,27 @@ p6a
 # gr<-GRanges(xchr[xchr$SMC=="italic(\"dpy-26\"^cs)",])
 # seqlevels(gr)<-seqlevels(Celegans)
 # tpm366<-import(paste0(workDir,"/otherData/sumFR_366_B_UniqueMultiple.bw"),
-#                format="bw")
-# tpm366<-ws235toCe11(tpm366)
+#                 format="bw")
+# seqlevelsStyle(tpm366)<-"ucsc"
+# seqlevels(tpm366)<-seqlevels(gr)
 # gr$baseMean<-binnedAverage(gr,mcolAsRleList(tpm366,"score"),varname="tpm366",na.rm=T)$tpm366
 # gr$measure="Expression"
-#bm<- data.frame(gr) #%>% distinct(wormbaseID,baseMean,measure)
-bm<- data.frame(xchr) %>% distinct(wormbaseID,baseMean,measure)
+# bm<- data.frame(gr) %>% distinct(wormbaseID,baseMean,measure,Loops)
+# p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
+#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+#   facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-12,15)) +
+#   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
+#         panel.grid.major=element_blank(),
+#         panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +
+#   xlab(label=element_blank()) + ylab("Log2(base mean counts)")+
+#   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
+#                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
+#                         textsize=3,margin_top=0.1)
+xchr$measure<-"Expression"
+bm<- data.frame(xchr) %>% distinct(wormbaseID,baseMean,measure,Loops)
 p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-12,15)) +
+  facet_wrap(.~measure) + ggtitle(" ") + theme_bw()+ coord_cartesian(ylim=c(-5,20)) +
   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.title=element_text(size=10)) +
@@ -610,6 +623,8 @@ p6b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
                         textsize=3,margin_top=0.1)
+
+p6b
 
 p6<-ggarrange(p6b,p6a,ncol=2,widths=c(1.8,8.7))
 

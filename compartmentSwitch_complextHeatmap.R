@@ -467,8 +467,8 @@ pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_10k\\.oriented\\.3q
 
 #rnaseqTPMpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks"
 #rnaseqLFCpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks/p0.05_lfc0.5_filtCycChrAX"
-rnaseqTPMpath<-paste0(workDir,"/tracks")
-rnaseqLFCpath<-paste0(workDir,"/tracks/p0.05_lfc0.5_filtCycChrAX")
+rnaseqTPMpath<-paste0(workDir,"/tracks/2021_RNAseq_MDas")
+rnaseqLFCpath<-paste0(workDir,"/tracks/2021_RNAseq_MDas/p0.05_lfc0.5_filtCycChrAX")
 
 
 rnaTPM<-data.frame(filePaths=paste0(rnaseqTPMpath,"/PMW366_TPM_avr.bw"),

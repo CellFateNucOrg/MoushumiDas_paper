@@ -16,8 +16,8 @@ if(!dir.exists(paste0(workDir,"/plots"))) {
 
 #hicFeaturePath="/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
 #RNAseqPath="/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas"
-hicFeaturePath=paste0(workDir,"/hicFeatures")
-RNAseqPath=workDir
+hicFeaturePath=workDir
+RNAseqPath=paste0(workDir,"/tracks/2021_RNAseq_MDas")
 
 ##########################-
 # domain sizes -------
@@ -41,9 +41,9 @@ mergeAdjacentDomains<-function(pca){
   pcaA<-pca[pca$AB=="A"]
   pcaB<-pca[pca$AB=="B"]
   pca0<-pca[pca$AB==0]
-  pcaA<-reduce(pcaA)
-  pcaB<-reduce(pcaB)
-  pca0<-reduce(pca0)
+  pcaA<-GenomicRanges::reduce(pcaA)
+  pcaB<-GenomicRanges::reduce(pcaB)
+  pca0<-GenomicRanges::reduce(pca0)
   pcaA$AB<-"A"
   pcaB$AB<-"B"
   pca0$AB<-0
@@ -52,7 +52,7 @@ mergeAdjacentDomains<-function(pca){
 }
 #gr<-pca1
 smootheByChr<-function(gr,winWidth=25){
-    grl<-split(gr$score,seqnames(gr))
+    grl<-GenomicRanges::split(gr$score,seqnames(gr))
     tmpl<-lapply(grl,rollmean,k=winWidth,fill=0)
     gr$smScore<-unlist(tmpl)
     return(gr)
@@ -166,7 +166,7 @@ pcas<-data.frame(SMC=c("TEVonly"),
                  strain =c("366"),
                  E1=NA, E2=NA)
 
-tpm366<-import(paste0(RNAseqPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+tpm366<-import(paste0(RNAseqPath,"/PMW366_TPM_avr.bedgraph"),format="bedgraph")
 cov366<-coverage(tpm366,weight="score")
 
 E1files=list.files(paste0(hicFeaturePath,"/otherData"),
@@ -312,6 +312,7 @@ p3<-ggplot(df[df$XvA=="X",],aes(x=bin,y=stateWidth,fill=state)) +
 
 
 
+
 ############################-
 # overlap of states with digitized compartment autosomes in trans---------
 ############################-
@@ -361,11 +362,6 @@ df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
 df$bin<-factor(df$bin,levels=1:50)
 
-# p3<-ggplot(df[df$XvA!="X",],aes(x=bin,y=stateFrequency,fill=state)) +
-#   geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
-#   theme_bw() +
-#   theme(legend.position = "none") +
-#   facet_grid(rows=vars(compartment),cols=vars(SMC)) + ggtitle(paste0("Frequency of autosomal chromosome states in digitized eigen vector bins"))
 
 p4<-ggplot(df[df$XvA!="X",],aes(x=bin,y=stateWidth,fill=state)) +
   geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
@@ -374,6 +370,26 @@ p4<-ggplot(df[df$XvA!="X",],aes(x=bin,y=stateWidth,fill=state)) +
   facet_grid(cols=vars(compartment),rows=vars(SMC))+ ggtitle(paste0("Autosomes"))
 p4
 
+p4a<-ggplot(df[df$XvA!="X" & df$SMC=="wt",],aes(x=bin,y=stateWidth,fill=state)) +
+  geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  facet_grid(cols=vars(compartment),rows=vars(SMC))+ ggtitle(paste0("Autosomes"))
+p4a
 
+
+
+
+
+p<-ggarrange(ggarrange(p2,p4a,nrow=2,labels=c("","D")),p1,ncol=2,labels=c("C","H"))
+p
+
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 2", size = 14))
+ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2.pdf"),p,device="pdf",width=21,height=7,units="cm")
+
+p<-ggarrange(p4,p3,ncol=2,labels=c("B",""))
+p
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S2", size = 14))
+ggsave(paste0(workDir,"/plots/HiCfeatures_FigS2.pdf"),p,device="pdf",width=21,height=7,units="cm")
 
 

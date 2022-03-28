@@ -52,12 +52,12 @@ assignInNamespace("getREF",getREF,ns="seqplots")
 
 # DCC subunits and kleisins -----
 
-bwFiles<-paste0(hicFeaturePath,"/publicData/",c("DPY27_N2_L3_average_ce11.bw",
-                                         "GSE87741_DPY30_N2_MxEmb_MACS141_e5_average_ce11.bw",
-                                         "GSE87741_SDC2_N2_MxEmb_MACS141_e5_average_ce11.bw",
-                                         "GSE87741_SDC3_N2_MxEmb_MACS141_e5_average_ce11.bw",
-                                         "KLE2_N2_L3_GSE45678_ce11.bw",
-                                         "GSM4293382_SCC1_Q0835_mE16_E_N2_L3_rep1_ce11.bw"
+bwFiles<-paste0(hicFeaturePath,"/publicData/",c("DPY27_N2_L3_GSE67650_ce11.bw", # Kramer et al (2015)
+ "GSE87741_DPY30_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)
+ "GSE87741_SDC2_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)
+ "GSE87741_SDC3_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)
+ "KLE2_N2_L3_GSE45678_ce11.bw", # Kranz et al. (2013)
+ "GSM4293382_SCC1_Q0835_mE16_E_N2_L3_rep1_ce11.bw" # Huang et al. (2022)
 ))
 
 for(anch in 1:nrow(anchordf)){
