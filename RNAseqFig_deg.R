@@ -288,21 +288,6 @@ p<-ggarrange(p1,ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1
              ph1,ncol=3,widths=c(2,0.8,1),labels=c("B ","C ","D "))
 p<-annotate_figure(p, top = text_grob("Das et al., Figure 4", size = 14))
 
-ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=21,height=10,units="cm")
-ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=21,height=10,units="cm",bg="white")
+ggsave(paste0(workDir,"/plots/RNAseq_deg_Fig4.pdf"),p,device="pdf",width=21,height=10,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseq_deg_Fig4.png"),p,device="png",width=21,height=10,units="cm",bg="white")
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
-
-# p<-ggarrange(pnull,p1,
-#              ggarrange(pnull,p2,pnull,p2a,nrow=4,ncol=1,heights=c(0.3,1,0.3,1),
-#                           labels=c("","Autosomes","chrX","")),
-#              ph1,pnull, pnull,ncol=2,nrow=3,widths=c(0.5,0.5),
-#              heights=c(1,1.5,1.5),
-#              labels=c("A ","B ","C ","D ","E ","F "))
-# p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
-# p
-#
-# ggsave(paste0(workDir,"/plots/RNAseq_deg.pdf"),p,device="pdf",width=13,height=27,units="cm")
-# ggsave(paste0(workDir,"/plots/RNAseq_deg.png"),p,device="png",width=13,height=27,units="cm",bg="white")
-
-
-

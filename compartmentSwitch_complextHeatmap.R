@@ -185,14 +185,14 @@ bedClrEigenBin<-function(pca,namePCA){
   naidx<-is.na(pca2bed$score)
   pca2bed<-pca2bed[!naidx]
   trackLine<-paste0('track name="bin3q ',namePCA,'" description="3 quantile bins" visibility=1 itemRgb="On"\n')
-  export.bed(pca2bed,paste0("./otherData/bin3q_",namePCA,"_rgb.bed"))
-  pca2bed<-read.delim(paste0("./otherData/bin3q_",namePCA,"_rgb.bed"),header=F)
+  export.bed(pca2bed,paste0(workDir,"/otherData/bin3q_",namePCA,"_rgb.bed"))
+  pca2bed<-read.delim(paste0(workDir,"/otherData/bin3q_",namePCA,"_rgb.bed"),header=F)
   pca2bed<-cbind(pca2bed,md[!naidx,c("itemRGB")])
   write.table(pca2bed,
-              file=paste0("./otherData/bin3q_",namePCA,"_rgb.bed"),
+              file=paste0(workDir,"/otherData/bin3q_",namePCA,"_rgb.bed"),
               sep="\t",row.names=F,col.names=F,quote=F)
   # add trackline (but not necessary)
-  fConn <- file(paste0("./otherData/bin3q_",namePCA,"_rgb.bed"), 'r+')
+  fConn <- file(paste0(workDir,"/otherData/bin3q_",namePCA,"_rgb.bed"), 'r+')
   Lines <- readLines(fConn)
   writeLines(c(trackLine, Lines), con = fConn)
   close(fConn)
@@ -229,14 +229,14 @@ bedClrSwitch<-function(pca,namePCA){
   naidx<-is.na(pca2bed$score)
   pca2bed<-pca2bed[!naidx]
   trackLine<-paste0('track name="switch ',namePCA,'" description="Switch bin" visibility=1 itemRgb="On"\n')
-  export.bed(pca2bed,paste0("./otherData/switchBin_",namePCA,"_rgb.bed"))
-  pca2bed<-read.delim(paste0("./otherData/switchBin_",namePCA,"_rgb.bed"),header=F)
+  export.bed(pca2bed,paste0(workDir,"/otherData/switchBin_",namePCA,"_rgb.bed"))
+  pca2bed<-read.delim(paste0(workDir,"/otherData/switchBin_",namePCA,"_rgb.bed"),header=F)
   pca2bed<-cbind(pca2bed,md[!naidx,c("itemRGB")])
   write.table(pca2bed,
-              file=paste0("./otherData/switchBin_",namePCA,"_rgb.bed"),
+              file=paste0(workDir,"/otherData/switchBin_",namePCA,"_rgb.bed"),
               sep="\t",row.names=F,col.names=F,quote=F)
   # add trackline (but not necessary)
-  fConn <- file(paste0("./otherData/switchBin_",namePCA,"_rgb.bed"), 'r+')
+  fConn <- file(paste0(workDir,"/otherData/switchBin_",namePCA,"_rgb.bed"), 'r+')
   Lines <- readLines(fConn)
   writeLines(c(trackLine, Lines), con = fConn)
   close(fConn)
@@ -456,7 +456,8 @@ refPCAs<-c("TEVonly")
 otherPCAs<-c("dpy26","kle2","scc1","coh1")
 prettyOtherPCAs<-c("dpy-26cs","kle-2cs","scc-1cs","coh-1cs")
 
-pcaPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/otherData"
+#pcaPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/otherData"
+pcaPath=paste0(workDir,"/otherData")
 E1files=list.files(paste0(pcaPath),
                    pattern="_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E1\\.rds")
 E2files=list.files(paste0(pcaPath),
@@ -464,8 +465,11 @@ E2files=list.files(paste0(pcaPath),
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E1\\.rds")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E2\\.rds")))]
 
-rnaseqTPMpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks"
-rnaseqLFCpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks/p0.05_lfc0.5_filtCycChrAX"
+#rnaseqTPMpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks"
+#rnaseqLFCpath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/tracks/p0.05_lfc0.5_filtCycChrAX"
+rnaseqTPMpath<-paste0(workDir,"/tracks")
+rnaseqLFCpath<-paste0(workDir,"/tracks/p0.05_lfc0.5_filtCycChrAX")
+
 
 rnaTPM<-data.frame(filePaths=paste0(rnaseqTPMpath,"/PMW366_TPM_avr.bw"),
                    shortNames="tpm366")
@@ -559,7 +563,8 @@ typesOIwb3<-c( "snoRNA", "nc_primary_transcript","circular_ncRNA" , "pseudogenic
 
 #listdf<-NULL
 refset=refPCAs[1]
-featureTypePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/tracks"
+#featureTypePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures/tracks"
+featureTypePath<-paste0(workDir,"/tracks")
 bins<-readRDS(paste0(pcaPath,"/",pcas$E1[pcas$SMC==refset]))
 mcols(bins)<-NULL
 bins<-getChromMarks(bins,rnaTPM)

@@ -436,9 +436,9 @@ p<-ggarrange(ggarrange(p1,
 
 #ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
 p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseq_TEV.pdf"),p,device="pdf",width=21,height=21,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseq_TEV_Fig5.pdf"),p,device="pdf",width=21,height=21,units="cm")
 
-ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=21,height=21,units="cm",
+ggsave(paste0(workDir,"/plots/RNAseq_TEV_Fig5.png"),p,device="png",width=21,height=21,units="cm",
        bg="white")
   #http://sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page
 

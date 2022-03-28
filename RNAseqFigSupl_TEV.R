@@ -677,59 +677,6 @@ p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
   ggtitle(paste0(" "))
 
 
-# chrSubset="chrX"
-# localPadj=0.05
-# localLFC=0
-# grp=useContrasts[1]
-# listTbls<-list()
-# for(grp in useContrasts){
-#   salmon<-data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#   sig<-getSignificantGenes(salmon, padj=localPadj, lfc=localLFC,
-#                            namePadjCol="padj",
-#                            nameLfcCol="log2FoldChange",
-#                            direction="both",
-#                            chr=chrSubset, nameChrCol="chr")
-#   sig$geneLength<-sig$end-sig$start
-#   sig$upVdown<-factor(ifelse(sig$log2FoldChange>0,"up","down"))
-#   sig$SMC<-grp
-#   listTbls[[grp]]<-sig
-# }
-#
-#
-# allSig<-do.call(rbind,listTbls)
-# allSig$SMC<-factor(allSig$SMC,levels=useContrasts,labels=prettyNames)
-# p7c<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
-#   geom_point(size=0.4) +
-#   scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
-#                         high=scales::muted("#0000ff55"), na.value="#ffffff22",
-#                         limits=c(-1,1),oob=scales::squish,name="Log2FC")+
-#   facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
-#   ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
-#   theme(legend.position = "bottom",plot.title = element_text(size=12)) +
-#   xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")
-# p7c
-#
-#
-# uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
-#
-# allSig$lengthBin<-cut(allSig$geneLength,quantile(uniqGenes$geneLength,seq(0,1,0.1)),
-#                       dig.lab=0,ordered_result=T,right=T,include.lowest=T)
-#
-#
-# labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$lengthBin) ))),
-#                  upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$lengthBin) ))))
-#
-# levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
-# #allSig[is.na(allSig$lengthBin),]
-# p7d<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
-#   facet_grid(rows=vars(SMC),labeller=label_parsed) + theme_bw() +
-#   scale_fill_manual(values=c(scales::muted("red"),scales::muted("blue")),name="Log2FC") +
-#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
-#   ylab("Fraction of genes up & down regulated") + xlab("Gene length (bp)") +
-#   ggtitle(paste0(" "))
-#p7d
-
-
 #################-
 ## plot length vs 366 TPM --------
 #################-
@@ -759,7 +706,13 @@ rownames(allSig)<-NULL
 facetLabels<-allSig %>% select(SMC,complexes) %>% distinct()
 facetLabels$log2FoldChange<-1
 
-p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
+# get 366 TPM
+#tpm<-data.frame(readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2021_RNAseq_MDas/rds/p0.05_lfc0.5_filtCycChrAX/getSalmonTPM/filtCycChrAX_lfc_tpm_expressedGenes_HiCsamples.rds"))
+tpm<-data.frame(readRDS(paste0(outPath,"/otherData/filtCycChrAX_lfc_tpm_expressedGenes_HiCsamples.rds")))
+
+allSig<-left_join(allSig,tpm[,c("tpm_366","wormbaseID")])
+
+p7aa<-ggplot(allSig,aes(x=log2(geneLength),y=log2(tpm_366),color=log2FoldChange)) +
   geom_point(size=0.4) +
   scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
                         high=scales::muted("#0000ff55"), na.value="#ffffff22",
@@ -767,10 +720,10 @@ p7a<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)
   facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
   ggtitle(paste0("Significantly changed genes on ",chrSubset," p<",localPadj," LFC>",localLFC))+
   theme(legend.position = "bottom", plot.title = element_text(size=12)) +
-  xlab("Log2(gene length in bp)") + ylab("Log2(base mean expression)")+
+  xlab("Log2(gene length in bp)") + ylab("Log2(TPM TEV only)")+
   #geom_text(label=allSig$complexes,parse=T,x=7.5,y=15,size=3.5)
-  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=17,size=3.5,color="black",hjust=0)
-p7a
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=14,size=3.5,color="black",hjust=0)
+p7aa
 
 
 uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
@@ -784,7 +737,7 @@ labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", level
 
 levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
 #allSig[is.na(allSig$lengthBin),]
-p7b<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
+p7bb<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
   facet_grid(rows=vars(SMC),labeller=label_parsed) + theme_bw() +
   scale_fill_manual(values=c(scales::muted("red"),scales::muted("blue")),name="Log2FC") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
@@ -898,25 +851,25 @@ p8<-ggpubr::ggarrange(p8a,p8b,ncol=2,nrow=1)
 ############### Final assembly #########
 
 p<-ggarrange(p1,p2,p5,nrow=3,heights=c(2.5,1.5,3),labels=c("A ","B ","C "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S5", size = 14)) #face=bold
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.pdf"),p,device=cairo_pdf,width=21,height=29.7,
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S6", size = 14)) #face=bold
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1_FigS6.pdf"),p,device=cairo_pdf,width=21,height=29.7,
        unit="cm")
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1.png"),p,device="png",width=21,height=29.7,
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV1_FigS6.png"),p,device="png",width=21,height=29.7,
        unit="cm",bg="white")
 
 #nullp<-NULL
 p<-ggarrange(p3,p4,p6,nrow=3,heights=c(1,1.2,1),labels=c("A ","B ","C "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S6", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.pdf"),p,device="pdf",width=21,height=29.7,
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S7", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2_FigS7.pdf"),p,device="pdf",width=21,height=29.7,
        unit="cm")
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2.png"),p,device="png",width=21,height=29.7,
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV2_FigS7.png"),p,device="png",width=21,height=29.7,
        unit="cm",bg="white")
 
 # p<-ggarrange(ggarrange(p6a,p6b,ncol=2,widths=c(3,1.5), labels=c("A ","B ")),
 #               ggarrange(p6c,p6d,ncol=2,widths=c(3,1.5), labels=c("C ","D ")),nrow=2)
 
-p<-ggarrange(p7a,p7b,ncol=2,widths=c(3,1.5), labels=c("A ","B "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S8", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.pdf"),p,device="pdf",width=21,height=29.7,units="cm")
-ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3.png"),p,device="png",width=21,height=29.7,units="cm",bg="white")
+p<-ggarrange(p7aa,p7bb,ncol=2,widths=c(3,1.5), labels=c("A ","B "))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S9", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3_FigS9.pdf"),p,device="pdf",width=21,height=29.7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_TEV3_FigS9.png"),p,device="png",width=21,height=29.7,units="cm",bg="white")
 

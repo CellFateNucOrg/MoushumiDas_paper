@@ -13,7 +13,7 @@ if(!dir.exists(paste0(workDir,"/plots"))){
 hicFeaturePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
 
 anchordf<-data.frame(source=c("eigen382"),
-                     file=c(paste0(hicFeaturePath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+                     file=c(paste0(workDir,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
 
 
 ##### subsitute for getREF function from seqplots thaht has an unfixed bug.
