@@ -20,11 +20,8 @@ Panel G created using _ChIPseqPlots.R_ script and publically available ChIP seq 
 "GSM4293382_SCC1_Q0835_mE16_E_N2_L3_rep1_ce11.bw" # Huang et al. (2022)
 ```
 
-### Figure 4 
-Panels for SDC-3AID RNAseq created with _RNAseqFig_deg.R_ script
-
 ### Figure 5
-Figure of kleisin subunit cleavage RNAseq created with _RNAseqFig_TEV.R_ script
+Figure of kleisin subunit cleavage RNAseq and SDC-3AID RNAseq were created with _combinedRNAseq_Fig.R_ script
 
 ## Supplementary figures
 
