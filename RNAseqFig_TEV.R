@@ -425,6 +425,8 @@ p4<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
 
 p4
 
+ddd<-xchr %>% filter(Loops=="Anchor", padj<0.05, abs(log2FoldChange)>0.5)
+
 
 ############################### Final arrangement ------
 p<-ggarrange(ggarrange(p1,
