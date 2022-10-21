@@ -65,11 +65,12 @@ for (grp in pcas$SMC){
   pca1<-import(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
   pca2<-import(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
-  pca1<-smootheByChr(pca1,winWidth=50)
-  plot(1:length(pca1),pca1$score,type="l")
-  lines(1:length(pca1),pca1$smScore,type="l",col="red")
-  pca1$AB<-ifelse(pca1$smScore>0,"A",0)
-  pca1$AB[pca1$smScore<0]<-"B"
+  #pca1<-smootheByChr(pca1,winWidth=50)
+  #pcasave<-pca1
+  #plot(1:length(pca1),pca1$score,type="l")
+  #lines(1:length(pca1),pca1$smScore,type="l",col="red")
+  pca1$AB<-ifelse(pca1$score>0,"A",0)
+  pca1$AB[pca1$score<0]<-"B"
   pca1<-mergeAdjacentDomains(pca1)
   idx<-which(pca1$AB==0)
   idx<-idx[ifelse(idx[1]==1,2,1):length(idx)] # remove first index if it is 1
@@ -77,32 +78,15 @@ for (grp in pcas$SMC){
   pca1$AB[idx[sameChr]]<-pca1$AB[(idx-1)[sameChr]]
   pca1<-mergeAdjacentDomains(pca1)
 
-  #pca2<-smootheByChr(pca2,winWidth=10)
-  pcasave<-pca2
-  #pcasave$score<-pcasave$smScore
-  #pcasave$smScore<-NULL
-  export.bw(pcasave,"00_score.bw")
-  plot(1:length(pca2),pca2$score,type="l")
-  #lines(1:length(pca2),pca2$score,type="l",col="red")
+
   pca2$AB<-ifelse(pca2$score>0,"A",0)
   pca2$AB[pca2$score<0]<-"B"
-  pcasave<-pca2
-  pcasave$score<-NULL
-  #pcasave$smScore<-NULL
-  names(mcols(pcasave))<-c("name")
-  export.bed(pcasave,"01_calledAB.bed")
   pca2<-mergeAdjacentDomains(pca2)
-  pcasave<-pca2
-  names(mcols(pcasave))<-c("name")
-  export.bed(pcasave,"02_mergedAdjacent.bed")
   idx<-which(pca2$AB==0)
   idx<-idx[ifelse(idx[1]==1,2,1):length(idx)] # remove first index if it is 1
   sameChr<-as.vector(seqnames(pca2)[idx]==seqnames(pca2)[idx-1])
   pca2$AB[idx[sameChr]]<-pca2$AB[(idx-1)[sameChr]]
   pca2<-mergeAdjacentDomains(pca2)
-  pcasave<-pca2
-  names(mcols(pcasave))<-c("name")
-  export.bed(pcasave,"03_removed0s.bed")
 
   pca1$SMC<-grp
   pca2$SMC<-grp
@@ -117,7 +101,7 @@ df<-do.call(rbind,listdf)
 row.names(df)<-NULL
 df$XvA<-ifelse(df$seqnames=="chrX","chrX","Autosomes")
 
-saveRDS(df[df$eigen=="E1",],"./otherData/TCcomp_TEVonly&dpy26_100kbSmoothed.RDS")
+saveRDS(df[df$eigen=="E1",],"./otherData/TCcomp_TEVonly&dpy26_removed0s.RDS")
 saveRDS(df[df$eigen=="E2",],"./otherData/ABcomp_TEVonly&dpy26_removed0s.RDS")
 df<-df[df$eigen=="E2",]
 

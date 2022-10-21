@@ -727,9 +727,9 @@ tpm<-data.frame(readRDS(paste0(outPath,"/otherData/filtCycChrAX_lfc_tpm_expresse
 
 allSig<-left_join(allSig,tpm[,c("tpm_366","wormbaseID")])
 
-p7aa<-ggplot(allSig,aes(x=log2(geneLength),y=log2(tpm_366),color=log2FoldChange)) +
-  geom_point(size=0.4) +
-  scale_color_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
+p7aa<-ggplot(allSig,aes(x=log2(geneLength),y=log2(tpm_366))) +
+  geom_point(aes(colour=log2FoldChange),size=0.4) +
+  scale_colour_gradient2(low=scales::muted("#ff000055"),mid="#ffffff22",
                         high=scales::muted("#0000ff55"), na.value="#ffffff22",
                         limits=c(-0.5,0.5),oob=scales::squish,name="Log2FC")+
   facet_grid(rows=vars(SMC),labeller=label_parsed) +theme_bw()+
@@ -737,7 +737,23 @@ p7aa<-ggplot(allSig,aes(x=log2(geneLength),y=log2(tpm_366),color=log2FoldChange)
   theme(legend.position = "bottom", plot.title = element_text(size=12)) +
   xlab("Log2(gene length in bp)") + ylab("Log2(TPM TEV only)")+
   #geom_text(label=allSig$complexes,parse=T,x=7.5,y=15,size=3.5)
-  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=14,size=3.5,color="black",hjust=0)
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=7.5,y=14,size=3.5,color="black",hjust=0)+
+  geom_smooth(aes(x=log2(geneLength),y=log2(tpm_366)),
+                         allSig[allSig$upVdown=="down",],
+                         method="loess", se=F, size=0.5,
+                         color=c("#ff0000"),show.legend=T)+
+  stat_regline_equation(aes(x=log2(geneLength),y=log2(tpm_366),
+                          label=paste("Down:",..eq.label.., ..adj.rr.label.., sep = "~~~")),
+                        allSig[allSig$upVdown=="down",],
+                        label.x=12.5,label.y=14.5,size=3,colour="#ff0000")+
+  geom_smooth(aes(x=log2(geneLength),y=log2(tpm_366)),
+              allSig[allSig$upVdown=="up",],
+              method="loess", se=F, size=0.5,
+              color=c("#0000ff"),show.legend=T)+
+  stat_regline_equation(aes(x=log2(geneLength),y=log2(tpm_366),
+                            label=paste("Up:",..eq.label.., ..adj.rr.label.., sep = "~~~")),
+                          allSig[allSig$upVdown=="up",],
+                          label.x=12.5,label.y=12.5,size=3,colour="#0000ff")
 p7aa
 
 

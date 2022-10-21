@@ -157,7 +157,7 @@ for (g in 1:length(otherPCAs)){
     geom_stratum(width = 1/8)+#, fill = "white", color = "black") +
     geom_label(stat = "stratum", aes(label = after_stat(stratum)),reverse=F) +
     scale_x_discrete(limits = paste0("E2.", c("TEVonly",grp)), expand = c(.05, .05)) +
-    scale_fill_brewer("E2 tercile",type = "qual", palette = "Set1",na.value = "grey50") +
+    scale_fill_brewer("E2 tercile",type = "qual", palette = "Pastel1",na.value = "grey50") +
     theme_bw() +
     ggtitle(paste0("E2 terciles: TEVonly-> ",prettyGrp))
   plotList[[grp]]<-ggarrange(p1,p2,nrow=1)
@@ -170,15 +170,49 @@ ggsave(paste0(workDir,"/plots/Figure_S4alluvial1.pdf"),plot=p,height=29,width=19
 
 ## create combined E1-E2 for ref and plot changes to E1 and E2 in different grps
 plotList<-list()
+corList<-list()
+corList1<-list()
 g=1
 for (g in 1:length(otherPCAs)){
   grp<-otherPCAs[g]
   prettyGrp<-prettyOtherPCAs[g]
 
+  p1a<-ggplot(E1all[[grp]],aes(x=score.TEVonly,y=get(paste0("score.",grp))))+
+    geom_point(size=0.5,alpha=0.5)+ylab(label=paste0("score.",grp)) +
+    ggtitle(paste0("E1 score ",grp," vs TEVonly")) + theme_bw() +
+    geom_abline(intercept=0,slope=1,colour="red") +
+    coord_cartesian(xlim=c(-1,1),ylim=c(-1,1))
+  p2a<-ggplot(E2all[[grp]],aes(x=score.TEVonly,y=get(paste0("score.",grp))))+
+    geom_point(size=0.5,alpha=0.5)+ylab(label=paste0("score.",grp)) +
+    ggtitle(paste0("E2 score ",grp," vs TEVonly"))+ theme_bw() +
+    geom_abline(intercept=0,slope=1,colour="red")+
+    coord_cartesian(xlim=c(-1,1),ylim=c(-1,1))
+  corList[[grp]]<-ggarrange(p1a,p2a,nrow=1)
+
+
   twoEig<-inner_join(E1all[[grp]],E2all[[grp]],by=c("seqnames","start","end","width","strand"))
   twoEig$TEVonly.E1.E2<-factor(paste0(twoEig$bin.TEVonly.x,".",twoEig$bin.TEVonly.y),
                                levels=c("L.L","L.M","L.H","M.L","M.M","M.H","H.L","H.M","H.H"))
 
+
+  if(g==1){
+    p3a<-ggplot(twoEig,aes(x=score.TEVonly.x,y=score.TEVonly.y))+
+      geom_point(size=0.5,alpha=0.5)+
+      xlab(label=paste0("TEVonly E1 score")) +
+      ylab(label=paste0("TEVonly E2 score")) +
+      ggtitle(paste0("TEVonly E1 vs E2")) + theme_bw() +
+      geom_abline(intercept=0,slope=1,colour="red") +
+      coord_cartesian(xlim=c(-1,1),ylim=c(-1,1))
+  corList1[["TEVonly"]]<-ggarrange(p3a)
+  }
+  p3a<-ggplot(twoEig,aes(x=get(paste0("score.",grp,".x")),y=get(paste0("score.",grp,".y"))))+
+    geom_point(size=0.5,alpha=0.5)+
+    xlab(label=paste0(grp," E1 score")) +
+    ylab(label=paste0(grp," E2 score")) +
+    ggtitle(paste0(grp," E1 vs E2")) + theme_bw() +
+    geom_abline(intercept=0,slope=1,colour="red") +
+    coord_cartesian(xlim=c(-1,1),ylim=c(-1,1))
+    corList1[[grp]]<-ggarrange(p3a)
   tmp<-twoEig %>% group_by(TEVonly.E1.E2,
                            across(paste0("bin.",grp,".x")),
                            across(paste0("bin.",grp,".y"))) %>%
@@ -187,7 +221,7 @@ for (g in 1:length(otherPCAs)){
   p1<-ggplot(tmp,aes(y=count,axis1=get(paste0("bin.",grp,".x")),
                      axis2=TEVonly.E1.E2,
                      axis3=get(paste0("bin.",grp,".y"))))+
-    geom_alluvium(aes(fill=TEVonly.E1.E2),reverse=F)+
+    geom_alluvium(aes(fill=get(paste0("bin.",grp,".x"))),reverse=F)+
     geom_stratum(width = 1/8)+#, fill = "white", color = "black") +
     geom_label(stat = "stratum", aes(label = after_stat(stratum)),reverse=F) +
     scale_x_continuous(breaks =1:3, labels= c(paste0(grp,".E1"), "TEVonly.E1.E2",paste0(grp,".E2")))+
@@ -204,7 +238,7 @@ for (g in 1:length(otherPCAs)){
   p2<-ggplot(tmp,aes(y=count,axis1=get(paste0("bin.",grp,".x")),
                      axis2=TEVonly.E1.E2,
                      axis3=get(paste0("bin.",grp,".y"))))+
-    geom_alluvium(aes(fill=TEVonly.E1.E2),reverse=F)+
+    geom_alluvium(aes(fill=get(paste0("bin.",grp,".y"))),reverse=F)+
     geom_stratum(width = 1/8)+#, fill = "white", color = "black") +
     geom_label(stat = "stratum", aes(label = after_stat(stratum)),reverse=F) +
     scale_x_continuous(breaks =1:3, labels= c(paste0(grp,".E1"), "TEVonly.E1.E2",paste0(grp,".E2")))+
@@ -218,6 +252,11 @@ for (g in 1:length(otherPCAs)){
 p<-marrangeGrob(plotList,nrow=2,ncol=1)
 ggsave(paste0(workDir,"/plots/Figure_S4alluvial2.pdf"),plot=p,height=29,width=19,unit="cm")
 
+p<-marrangeGrob(corList,nrow=4,ncol=1)
+ggsave(paste0(workDir,"/plots/Figure_S4cor.pdf"),plot=p,height=29,width=19,unit="cm")
+
+p<-marrangeGrob(corList1,nrow=4,ncol=2)
+ggsave(paste0(workDir,"/plots/Figure_S4cor1.pdf"),plot=p,height=29,width=19,unit="cm")
 
 ## 3. plot different combinations of grps for E1 with TEV in the middle. same for E2
 pcaPairs<-combn(otherPCAs,2)
@@ -245,6 +284,7 @@ for (i in 1:ncol(pcaPairs)){
     ggtitle(paste0("E1 terciles: TEVonly->",grp1,"&",grp2))
   p1
 
+  p1a<-ggplot(tmpE1)
   twoGrpE2<-inner_join(E2all[[grp1]],E2all[[grp2]],by=c("seqnames","start","end","width","strand",
                                                         "score.TEVonly","bin.TEVonly","pca"))
 
@@ -263,3 +303,56 @@ for (i in 1:ncol(pcaPairs)){
 
 p<-marrangeGrob(plotList,nrow=2,ncol=1)
 ggsave(paste0(workDir,"/plots/Figure_S4alluvial3.pdf"),plot=p,height=29,width=19,unit="cm")
+
+
+
+## show at E1 and E2 are independant
+plotList<-list()
+g=1
+for (g in 1:length(pcas$SMC)){
+  grp<-pcas$SMC[g]
+  prettyGrp<-prettyOtherPCAs[g]
+
+  twoEig<-inner_join(E1all[[grp]],E2all[[grp]],by=c("seqnames","start","end","width","strand"))
+  twoEig$TEVonly.E1.E2<-factor(paste0(twoEig$bin.TEVonly.x,".",twoEig$bin.TEVonly.y),
+                               levels=c("L.L","L.M","L.H","M.L","M.M","M.H","H.L","H.M","H.H"))
+
+  tmp<-twoEig %>% group_by(TEVonly.E1.E2,
+                           across(paste0("bin.",grp,".x")),
+                           across(paste0("bin.",grp,".y"))) %>%
+    summarise(count=n(),na.rm=T)
+
+  p1<-ggplot(tmp,aes(y=count,axis1=get(paste0("bin.",grp,".x")),
+                     axis2=TEVonly.E1.E2,
+                     axis3=get(paste0("bin.",grp,".y"))))+
+    geom_alluvium(aes(fill=get(paste0("bin.",grp,".x"))),reverse=F)+
+    geom_stratum(width = 1/8)+#, fill = "white", color = "black") +
+    geom_label(stat = "stratum", aes(label = after_stat(stratum)),reverse=F) +
+    scale_x_continuous(breaks =1:3, labels= c(paste0(grp,".E1"), "TEVonly.E1.E2",paste0(grp,".E2")))+
+    scale_fill_brewer("E1.E2 terciles",type = "qual", palette = "YlOrRd",na.value = "grey50") +
+    theme_bw() +
+    ggtitle(paste0("E1.E2 terciles: TEVonly->",prettyGrp))
+
+  twoEig$TEVonly.E1.E2<-factor(paste0(twoEig$bin.TEVonly.x,".",twoEig$bin.TEVonly.y),
+                               levels=c("L.L","M.L","H.L","L.M","M.M","H.M","L.H","M.H","H.H"))
+  tmp<-twoEig %>% group_by(TEVonly.E1.E2,
+                           across(paste0("bin.",grp,".x")),
+                           across(paste0("bin.",grp,".y"))) %>%
+    summarise(count=n(),na.rm=T)
+  p2<-ggplot(tmp,aes(y=count,axis1=get(paste0("bin.",grp,".x")),
+                     axis2=TEVonly.E1.E2,
+                     axis3=get(paste0("bin.",grp,".y"))))+
+    geom_alluvium(aes(fill=get(paste0("bin.",grp,".y"))),reverse=F)+
+    geom_stratum(width = 1/8)+#, fill = "white", color = "black") +
+    geom_label(stat = "stratum", aes(label = after_stat(stratum)),reverse=F) +
+    scale_x_continuous(breaks =1:3, labels= c(paste0(grp,".E1"), "TEVonly.E1.E2",paste0(grp,".E2")))+
+    scale_fill_brewer("E1.E2 terciles",type = "qual", palette = "YlOrRd",na.value = "grey50") +
+    theme_bw() +
+    ggtitle(paste0("E1.E2 terciles: TEVonly->",prettyGrp))
+
+  plotList[[grp]]<-ggarrange(p1,p2,nrow=1)
+}
+
+p<-marrangeGrob(plotList,nrow=2,ncol=1)
+ggsave(paste0(workDir,"/plots/Figure_S4alluvial4.pdf"),plot=p,height=29,width=19,unit="cm")
+
