@@ -344,7 +344,9 @@ clickedBatch="382"
 
 
 width(tenkbInTads)
+saveRDS(tenkbInTads[seqnames(tenkbInTads)=="chrX",],paste0(outPath,"/txt/Tenkb_NotAnchor.rds" ))
 width(anchors)
+saveRDS(anchors,paste0(outPath,"/txt/Tenkb_Anchor.rds" ))
 dataList<-list()
 #grp=useContrasts[3]
 statList<-list()
@@ -395,14 +397,14 @@ for (grp in useContrasts[1]){
 dataTbl<-do.call(rbind,dataList)
 xchr<-dataTbl[dataTbl$seqnames=="chrX",]
 cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
-  filter(SMC=="dpy26")
+  dplyr::filter(SMC=="dpy26")
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 xchr$complexes<-complexes[xchr$SMC]
 facetLabels<-xchr %>% dplyr::select(SMC,Loops,complexes) %>% distinct()
 
-c1<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% summarize(count=n())
-c2<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
+c1<-xchr %>% dplyr::filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% dplyr::summarize(count=n())
+c2<-xchr %>% dplyr::filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% dplyr::filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
 
 c2$count/c1$count
 
