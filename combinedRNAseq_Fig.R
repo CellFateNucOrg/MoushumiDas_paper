@@ -346,6 +346,7 @@ clickedBatch="382"
 width(tenkbInTads)
 saveRDS(tenkbInTads[seqnames(tenkbInTads)=="chrX",],paste0(outPath,"/txt/Tenkb_NotAnchor.rds" ))
 width(anchors)
+anchors<-anchors[-c(9,33),]
 saveRDS(anchors,paste0(outPath,"/txt/Tenkb_Anchor.rds" ))
 dataList<-list()
 #grp=useContrasts[3]

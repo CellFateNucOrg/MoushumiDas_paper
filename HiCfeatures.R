@@ -8,6 +8,7 @@ library(tidyr)
 #library(gridExtra)
 #library(gtable)
 library(zoo)
+library(ggpubr)
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -116,22 +117,44 @@ med<-df%>%filter(SMC=="TEVonly") %>% group_by(XvA,AB) %>% summarise(med=median(w
 dfsum<-df %>% group_by(SMC,XvA,AB) %>% summarise(mean=mean(width),median=median(width))
 dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
 
-p1<-ggplot(df,aes(x=AB,y=width,fill=AB)) +
-  geom_boxplot(outlier.shape=NA,notch=T,varwidth=T) +
-  scale_fill_manual(values=c("red","lightblue"))+
+# st<-compare_means(width~AB,df,group.by=c("SMC","XvA"),
+#                   method="t.test",p.adjust.method="holm")
+# st$padj.format<-ufs::formatPvalue(st$p.adj,digits=3)
+# p1<-ggplot(df,aes(x=AB,y=width)) +
+#   geom_boxplot(aes(fill=AB),outlier.shape=NA,notch=T,varwidth=T) +
+#   scale_fill_manual(values=c("red","lightblue"))+
+#   coord_cartesian(ylim = c(0, 100000))+
+#   facet_grid(rows=vars(XvA),cols=vars(SMC)) + theme_bw() +
+#   theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
+#         text = element_text(size = 12))+
+#   #geom_hline(yintercept=8000) +
+#   stat_summary(fun="mean",geom="point",shape=4,size=2)+
+#   geom_segment(x=1,y=91000,xend=2,yend=91000,size=0.01)+
+#   geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000)+
+#   geom_text(data = df %>% group_by(AB, SMC, XvA) %>%
+#              summarize(Count = n(),width=86000),
+#            aes(label = paste0("n=", Count)),
+#            position = position_dodge(0.85), size=3.5, show.legend = FALSE)
+# p1
+
+st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr")
+st$padj.format<-ufs::formatPvalue(st$p.adj,digits=3)
+p1a<-ggplot(df,aes(x=SMC,y=width)) +
+  geom_boxplot(outlier.shape=NA,notch=T,varwidth=T,fill="lightblue",alpha=0.5) +
+  scale_fill_manual(values=c("lightblue"))+
   coord_cartesian(ylim = c(0, 100000))+
-  facet_grid(rows=vars(XvA),cols=vars(SMC)) + theme_bw() +
+  facet_grid(rows=vars(XvA),cols=vars(AB)) + theme_bw() +
   theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
         text = element_text(size = 12))+
   #geom_hline(yintercept=8000) +
-  stat_summary(fun="mean",geom="point",shape=4,size=2)#+
-  #geom_text(data = df %>% group_by(AB, SMC, XvA) %>%
-  #            summarize(Count = n(),width=80000),
-  #          aes(label = paste0("n=", Count)),
-  #          position = position_dodge(0.85), size=3.5, show.legend = FALSE)
-p1
-
-table(df$AB,df$SMC,df$XvA)
+  stat_summary(fun="mean",geom="point",shape=4,size=2)+
+  geom_segment(x=1,y=91000,xend=2,yend=91000,size=0.01)+
+  geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000)#+
+  # geom_text(data = df %>% group_by(AB, SMC, XvA) %>%
+  #             summarize(Count = n(),width=86000),
+  #           aes(label = paste0("n=", Count)),
+  #           position = position_dodge(0.85), size=3.5, show.legend = FALSE)
+p1a
 
 
 df1<-df %>% group_by(SMC,XvA,AB,eigen) %>% summarise(averageWidth=mean(width),
@@ -139,6 +162,10 @@ df1<-df %>% group_by(SMC,XvA,AB,eigen) %>% summarise(averageWidth=mean(width),
 
 df1$pcAvrIncrease<-df1$averageWidth/df1$averageWidth[1:4]
 df1
+
+
+
+
 
 ###########################-
 # compartments - digitized: 366tpm-----
@@ -365,11 +392,18 @@ p4a
 
 
 
-p<-ggarrange(ggarrange(p2,p4a,nrow=2,labels=c("","D")),p1,ncol=2,labels=c("C","H"))
+# p<-ggarrange(ggarrange(p2,p4a,nrow=2,labels=c("","D")),p1,ncol=2,labels=c("C","H"))
+# p
+#
+# p<-annotate_figure(p, top = text_grob("Das et al., Figure 2", size = 14))
+# ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2.pdf"),p,device="pdf",width=21,height=14,units="cm")
+
+p<-ggarrange(ggarrange(p2,p4a,nrow=2,labels=c("","D")),p1a,ncol=2,labels=c("C","H"))
 p
 
 p<-annotate_figure(p, top = text_grob("Das et al., Figure 2", size = 14))
-ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2.pdf"),p,device="pdf",width=21,height=7,units="cm")
+ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2a.pdf"),p,device="pdf",width=21,height=14,units="cm")
+
 
 p<-ggarrange(p4,p3,ncol=2,labels=c("B",""))
 p

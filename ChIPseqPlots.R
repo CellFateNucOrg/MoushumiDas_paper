@@ -12,8 +12,8 @@ if(!dir.exists(paste0(workDir,"/plots"))){
 
 hicFeaturePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
 
-anchordf<-data.frame(source=c("eigen382"),
-                     file=c(paste0(workDir,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+
+
 
 
 ##### subsitute for getREF function from seqplots thaht has an unfixed bug.
@@ -60,46 +60,49 @@ bwFiles<-paste0(hicFeaturePath,"/publicData/",c("DPY27_N2_L3_GSE67650_ce11.bw", 
  "GSM4293382_SCC1_Q0835_mE16_E_N2_L3_rep1_ce11.bw" # Huang et al. (2022)
 ))
 
-for(anch in 1:nrow(anchordf)){
-  anchors<-import(anchordf$file[anch])
-  anchorSource<-anchordf$source[anch]
+anchordf<-data.frame(source=c("eigen382"),
+                     file=c(paste0(workDir,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+#for(anch in 1:nrow(anchordf)){
+anchors<-import(anchordf$file[1])
+anchors<-anchors[-c(9,33),] # remove anchors 9 and 33 as they are multimapping regions
+anchorSource<-anchordf$source[1]
 
-  anchors<-anchors[seqnames(anchors)=="chrX"]
-  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+anchors<-anchors[seqnames(anchors)=="chrX"]
+seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
 
-  flankSize<-100000
+flankSize<-100000
 
 
-  p<-getPlotSetArray(tracks=c(bwFiles),
-                     features=c(anchors),
-                     refgenome="ce11", bin=flankSize/100,
-                     xmin=flankSize,
-                     xmax=flankSize, type="af",
-                     xanchored=max(width(anchors)))
+p<-getPlotSetArray(tracks=c(bwFiles),
+                   features=c(anchors),
+                   refgenome="ce11", bin=flankSize/100,
+                   xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=max(width(anchors)))
 
-  #bw<-import(bwFiles[6])
+#bw<-import(bwFiles[6])
 
-  dd<-plotHeatmap(p,plotz=F)
-  shortNames<-c("DPY-27",
-                "DPY-30","SDC-2",
-                "SDC-3",
-                "KLE-2","SCC-1")
-  heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99 ),na.rm=T)
-  minVal<-min(heatmapQuantiles[1,])
-  maxVal<-max(heatmapQuantiles[2,])
-  pdf(file=paste0(workDir,"/plots/Anchors_",anchorSource,"_ChIPSeq_DCC_seqplots_flank",
-                  flankSize/1000,"kb.pdf"),
-      height=8,width=11,paper="a4r")
-  plotAverage(p,main=paste0("ChrX ",anchorSource," anchors"),
-              error.estimates=F,labels=shortNames,plotScale="linear")
-  x<-plotHeatmap(p, main=paste0("ChrX ",anchorSource," anchors"), plotScale="linear", sortrows=T,
-                 clusters=1L,autoscale=F,zmin=-0.7,zmax=9.1, labels=shortNames,
-                 indi=F, sort_mids=T,sort_by=c(T,rep(F,length(bwFiles))),
-                 ln.v=F,
-                 clspace=c("#FFFFFF", "#FF0000"))
-  dev.off()
-}
+dd<-plotHeatmap(p,plotz=F)
+shortNames<-c("DPY-27",
+              "DPY-30","SDC-2",
+              "SDC-3",
+              "KLE-2","SCC-1")
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99 ),na.rm=T)
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+pdf(file=paste0(workDir,"/plots/Anchors_",anchorSource,"_ChIPSeq_DCC_seqplots_flank",
+               flankSize/1000,"kb.pdf"),
+    height=8,width=11,paper="a4r")
+plotAverage(p,main=paste0("ChrX ",anchorSource," anchors"),
+            error.estimates=F,labels=shortNames,plotScale="linear")
+x<-plotHeatmap(p, main=paste0("ChrX ",anchorSource," anchors"), plotScale="linear", sortrows=T,
+               clusters=1L,autoscale=F,zmin=-0.7,zmax=9.1, labels=shortNames,
+               indi=F, sort_mids=T,sort_by=c(T,rep(F,length(bwFiles))),
+               ln.v=F,
+               clspace=c("#FFFFFF", "#FF0000"))
+dev.off()
+
 
 # # get number for anchors vs flank
 # names(bwFiles)<-c("DPY-27_L3","DPY-30_emb","SDC-2_emb","SDC-3_emb",
