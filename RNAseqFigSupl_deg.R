@@ -506,3 +506,177 @@ ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1_FigS11.png"),p,device=png,width=21
 
 
 
+
+#------------------------------------------------------------------------------
+
+
+workDir<-getwd()
+if(!dir.exists(paste0(workDir,"/plots"))) {
+  dir.create(paste0(workDir,"/plots"))
+}
+
+# contrastsOI<-c("wt.TIR1.X.1mM_sdc3deg_vs_wt","wt.TIR1.sdc3deg.X_1mM_vs_0mM",
+#                "X.wt.wt.0mM_dpy26cs_vs_wt","X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt",
+#                "X.TIR1.sdc3deg.X_dpy26csaux_vs_wt0mM")
+# useContrasts<-c("sdc3","aux_sdc3bg","dpy26","sdc3dpy26","aux_sdc3dpy26")
+#
+# prettyNames<-c(substitute(italic(+-x^AID),list(x="sdc-3")),
+#                substitute(italic(x^AID+-IAA),list(x="sdc-3")),
+#                substitute(italic(x^cs),list(x="dpy-26")),
+#                substitute(italic(+-x^AID~y^cs),list(x="sdc-3",y="dpy-26")),
+#                substitute(italic(x^AID+-y^cs~IAA),list(x="sdc-3",y="dpy-26")))
+
+contrastsOI<-c("wt.TIR1.sdc3deg.X_1mM_vs_0mM",
+               "X.wt.wt.0mM_dpy26cs_vs_wt","X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt")
+useContrasts<-c("aux_sdc3bg","dpy26","sdc3dpy26")
+
+prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
+               substitute(italic(x^cs),list(x="dpy-26")),
+               substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
+
+prettyNames1<-c("sdc-3^AID","dpy-26^cs","sdc-3^(AID)dpy-26^(cs)")
+
+
+#plot(1:100,main=prettyNames[[5]])
+
+names(contrastsOI)<-useContrasts
+#strains<-c("366","382","775","784","828","844")
+#strain<-factor(strains,levels=strains)
+#SMC<-strain
+#levels(SMC)<-c("TEVonly",useContrasts)
+
+#controlGrp<-levels(SMC)[1] # control group
+groupsOI<-useContrasts
+
+
+source(paste0(workDir,"/functions.R"))
+
+
+
+lfcVal=0.5
+padjVal=0.05
+filterPrefix<-"filtCycChrAX"
+fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefix,"_")
+outPath=paste0(workDir)
+
+###################-
+# LFC per chr-------
+###################-
+## all genes
+sigTables<-list()
+for (grp in groupsOI[1]){
+  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+
+  sigTables[[grp]]<-as.data.frame(salmon)
+  sigTables[[grp]]$SMC<-grp
+}
+
+
+allSig<-do.call(rbind,sigTables)
+rownames(allSig)<-NULL
+allSig$chr<-gsub("chr","",allSig$chr)
+allSig$SMC<- factor(allSig$SMC,levels=groupsOI,labels=prettyNames)
+
+
+p11<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
+  geom_boxplot(outlier.shape=NA) +
+  facet_grid(cols=vars(SMC),labeller=label_parsed) + theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position="none")+
+  coord_cartesian(ylim=c(-0.5,0.5)) + scale_fill_grey(start=0.8, end=0.4)+
+  geom_hline(yintercept=0,linetype="dashed",col="red")+
+  xlab("Chromosome") + ylab(bquote(Log[2]~FC))
+
+
+
+
+##########-
+# heirarchical clustering of all LFC -------------
+##########-
+
+geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  colnames(salmon)[colnames(salmon)=="padj"]<-paste0(grp,"_padj")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"),paste0(grp,"_padj"))]
+  } else {
+    geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"),paste0(grp,"_padj"))], by=c("wormbaseID","chr"))
+  }
+}
+
+padjCols<-grep("_padj$",colnames(geneTable))
+notSigAny<-rowSums(is.na(geneTable[,padjCols]))==length(padjCols)
+geneTable<-geneTable[!notSigAny,]
+lfcCols<-grep("_lfc$",colnames(geneTable))
+colnames(geneTable)<-gsub("_lfc$","",colnames(geneTable))
+
+geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
+
+#minQ<-quantile(as.matrix(geneTable[,lfcCols]),0.01)
+#maxQ<-quantile(as.matrix(geneTable[,lfcCols]),0.99)
+minQ<- -0.5
+maxQ<- 0.5
+ht_opt$fast_hclust = TRUE
+
+heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("blue","white","red"))
+heatmapCol<-circlize::colorRamp2(c(minQ,0,maxQ),c("cyan","black","yellow"))
+
+o1 = seriate(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]), method = "PCA")
+hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),
+             heatmap_legend_param = list(title = gt_render("Log<sub>2</sub>FC")),
+             col=heatmapCol,
+             row_order = get_order(o1,1), column_order=1:length(useContrasts),
+             show_row_names=F,row_title="Autosomes",column_names_rot = 90,
+             heatmap_width = unit(0.7, "npc"))
+o1 = seriate(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), method = "PCA")
+hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",
+             col=heatmapCol,
+             column_labels=gt_render(prettyNames1,
+                                     gp=gpar(fontface="italic",fontsize=10)),
+             row_order = get_order(o1,1),  column_order=1:length(useContrasts),
+             show_row_names=F,row_title="X",column_names_rot = 75,
+             heatmap_width = unit(0.7, "npc"),show_heatmap_legend=F)
+htlist=hm1 %v% hm2
+ph11<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 10, 2, 2), "mm")))
+
+draw(htlist)
+
+pdf(file=paste0(workDir,"/plots/hclustering_deg.pdf"),width=5,height=8,
+    paper="a4")
+draw(htlist)
+dev.off()
+# hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),name="Log2FC",col=heatmapCol,
+#             clustering_distance_rows=clustMethod, column_order=1:5, column_title=clustMethod,
+#             show_row_names=F,row_title="Autosomes",column_names_rot = 45)
+# hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), name="NA",col=heatmapCol,
+#              clustering_distance_rows=clustMethod, column_order=1:5, column_title=clustMethod,
+#              show_row_names=F,row_title="chrX",column_names_rot = 45)
+# htlist=hm1 %v% hm2
+# draw(htlist)
+
+
+
+
+
+
+############################### Final arrangement ------
+pnull<-NULL
+p<-ggarrange(p11,ph11,nrow=1,ncol=2,labels=c("F ","G "),
+                       widths=c(1,1.1))
+
+#ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
+p<-annotate_figure(p, top = text_grob("Das et al., supplementary Figure ?", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig.pdf"),p,device="pdf",width=7,height=7,units="cm")
+
+ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig.png"),p,device="png",width=7,height=7,units="cm",
+       bg="white")
+
+
+
+
+
+
+

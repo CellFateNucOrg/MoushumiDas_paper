@@ -139,3 +139,84 @@ dev.off()
 # # DPY.27_L3 DPY.30_emb  SDC.2_emb  SDC.3_emb   KLE.2_L3   SCC.1_L3
 # # 10.478448 157.180196  72.203345  44.387412  25.900476   2.650302
 
+######-
+## SMC peak comparison
+######-
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE45678
+# Kranz AL, Jiao CY, Winterkorn LH, Albritton SE et al. Genome-wide analysis of condensin binding in Caenorhabditis elegans. Genome Biol 2013;14(10):R112. PMID: 24125077
+
+options(timeout = max(6000, getOption("timeout")))
+
+# get ce10 chain file
+ce10toCe11url<-"http://hgdownload.soe.ucsc.edu/goldenPath/ce10/liftOver/ce10ToCe11.over.chain.gz"
+ce10toCe11<-"ce10Toce11.over.chain"
+download.file(ce10toCe11url,paste0(workDir,"/",ce10toCe11,".gz"))
+system(paste0("gunzip ",workDir,"/",ce10toCe11,".gz"))
+file.remove(paste0(workDir,"/",ce10toCe11,".gz"))
+chainCe10toCe11<-import.chain(paste0(workDir,"/",ce10toCe11))
+
+
+kranzWig<-data.frame(
+  urls=c("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_CAPG1_N2_Mxemb_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_CAPG2_N2_MxEmb_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_DPY26_N2_Mxemb_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_DPY28_N2_MxEmb_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_HCP6_N2_MxEmb_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_KLE2_N2_L3_average_var.wig.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_KLE2_N2_Mxemb_average_var.wig.gz"),
+  sampleName=c("CAPG-1_Emb",
+               "CAPG-2_Emb",
+               "DPY-26_Emb",
+               "DPY-28_Emb",
+               "HCP-6_Emb",
+               "KLE-2_L3",
+               "KLE-2_Emb"),
+  complex=c("CondensinI/IDC",
+            "CondensinII",
+            "CondensinI/IDC",
+            "CondensinI/IDC",
+            "CondensinII",
+            "CondensinII",
+            "CondensinII")
+  )
+
+
+kranzBed<-data.frame(
+  urls=c("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl$/GSE45678_CAPG1_N2_MxEmb_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_CAPG2_N2_MxEmb_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_DPY26_N2_MxEmb_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_DPY28_N2_MxEmb_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_HCP6_N2_MxEmb_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_KLE2_N2_L3_peaks.bed.gz",
+         "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45678/suppl/GSE45678_KLE2_N2_Mxemb_peaks.bed.gz"),
+  sampleName=c("CAPG-1_Emb",
+               "CAPG-2_Emb",
+               "DPY-26_Emb",
+               "DPY-28_Emb",
+               "HCP-6_Emb",
+               "KLE-2_L3",
+               "KLE-2_Emb"),
+  complex=c("CondensinI/IDC",
+            "CondensinII",
+            "CondensinI/IDC",
+            "CondensinI/IDC",
+            "CondensinII",
+            "CondensinII",
+            "CondensinII")
+)
+
+url=kranzWig$urls[1]
+for (url in kranzWig$urls){
+  bwName=gsub("\\.wig\\.gz","_ce11.bw",basename(url))
+  if(!file.exists(paste0("./publicData/",bwName))){
+    download.file(url,destfile=basename(url))
+    system(paste0("gunzip ",basename(url)))
+    wig<-rtracklayer::import(gsub("\\.gz","",basename(url)))
+    seqlevels(wig)<-seqlevels(BSgenome.Celegans.UCSC.ce10::Celegans)
+    seqinfo(wig)<-seqinfo(BSgenome.Celegans.UCSC.ce10::Celegans)
+    bwce11<-unlist(rtracklayer::liftOver(wig,chain=chainCe10toCe11))
+    seqinfo(bwce11)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+    rtracklayer::export.bw(bwce11,paste0(workDir,"/publicData/",bwName))
+    file.remove(gsub("\\.gz","",basename(url))
+  }
+}
