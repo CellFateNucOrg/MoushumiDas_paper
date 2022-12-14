@@ -2,7 +2,6 @@ library(tidyverse)
 library(ggplot2)
 library(eulerr)
 library(ggpubr)
-#library(cowplot)
 library(ComplexHeatmap)
 library(circlize)
 library(fastcluster)
@@ -10,14 +9,11 @@ library(seriation)
 library(gridtext)
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
-library(showtext)
 library(ggtext)
-#library(ragg)
-#set_null_device("agg")
-#par(family="Arial")
-font_add(family="Arial","/System/Library/Fonts/Supplemental/Arial.ttf")
-showtext_auto()
-#theme_set(theme_get() + theme(text = element_text(family = 'Arial')))
+
+par(family="ArialMT")
+gpar(fontfamily="ArialMT")
+
 
 workDir<-getwd()
 if(!dir.exists(paste0(workDir,"/plots"))) {
@@ -29,28 +25,25 @@ contrastsOI<-c("X.wt.wt.0mM_scc16cs_vs_wt","X.wt.wt.0mM_coh1cs_vs_wt",
                "X.wt.wt.0mM_kle2cs_vs_wt")
 useContrasts<-c("scc1","coh1","scc1coh1","dpy26","kle2")
 
-prettyNames<-c(substitute(italic(x^cs),list(x="scc-1")),
-               substitute(italic(x^cs),list(x="coh-1")),
-               substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")),
-               substitute(italic(x^cs),list(x="dpy-26")),
-               substitute(italic(x^cs),list(x="kle-2")))
-#plot(1:100,main=prettyNames[[5]])
-# prettyNames<-c("*scc-1*<sup>cs</sup>",
-#                "*coh-1*<sup>cs</sup>",
-#                "*scc-1*<sup>cs</sup>*coh-1*<sup>cs</sup>",
-#                "*dpy-26*<sup>cs</sup>",
-#                "*kle-2*<sup>cs</sup>")
+
+prettyNames<-c("<i>scc-1</i><sup>cs</sup>",
+               "<i>coh-1</i><sup>cs</sup>",
+               "<i>scc-1</i><sup>cs</sup><i>coh-1</i><sup>cs</sup>",
+               "<i>dpy-26</i><sup>cs</sup>",
+               "<i>kle-2</i><sup>cs</sup>")
 
 prettyNames1<-c("scc-1^cs","coh-1^cs","scc-1^(cs)coh-1^cs","dpy-26^cs","kle-2^cs")
-#complexes<-c("cohesin^SCC-1","cohesin^COH-1","cohesins","condensinI/I^DC", "condensinII")
+
 complexes<-c("cohesin<sup>SCC-1</sup>",
              "cohesin<sup>COH-1</sup>",
              "cohesins",
              "condensin I/I<sup>DC</sup>",
              "condensin II")
-#complexes1<-c("cohesin^SCC-1","cohesin^COH-1","cohesins^(SCC-1)","condensinI/I^DC", "condensinII")
 complexes1<-c("cohesin<sup>SCC-1</sup>",
-              "cohesin<sup>COH-1</sup>","cohesins<sup>SCC-1</sup><br><sup>COH-1</sup>","condensin I/I<sup>DC</sup>", "condensin II")
+              "cohesin<sup>COH-1</sup>",
+              "cohesins<sup>SCC-1</sup><br><sup>COH-1</sup>",
+              "condensin I/I<sup>DC</sup>",
+              "condensin II")
 
 names(complexes)<-useContrasts
 names(complexes1)<-useContrasts
@@ -154,25 +147,29 @@ step<-150
 breaks<-seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step)
 labels<-abs(seq(floor(-smallMax/step)*step,ceiling(bigMax/step)*step,step))
 
-facetLabels<-sigPerChr %>% select(SMC,chr,complexes) %>% distinct()
+facetLabels<-sigPerChr %>% select(SMC,complexes) %>% distinct()
 
 p1  <-  ggplot(sigPerChr, aes(x=chr, y=genes, group=SMC)) +
-  facet_grid(direction~SMC,scales="free",space="free",
-             labeller=label_parsed) + theme_bw() +
+  facet_grid(direction~SMC,scales="free",space="free") +
+  theme_bw() +
   theme(legend.position="bottom", panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), strip.text = element_text(size = 12),
-        axis.text=element_text(size=12), axis.title=element_text(size=12)) +
+        panel.grid.minor = element_blank(),
+        strip.text.x = element_markdown(size = 12),
+        strip.text.y = element_text(size = 12),
+        axis.text=element_text(size=12), axis.title=element_text(size=12),
+        panel.spacing.y=unit(-0.3,"cm")) +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr),
            show.legend = FALSE) + scale_fill_grey(start=0.8, end=0.4) +
   xlab("Chromosome") + ylab("Number of genes") +
   scale_y_continuous(breaks=breaks,labels=labels,
-                     expand = expansion(add = c(70, 70))) +
+                     expand = expansion(add = c(70,70))) +
   geom_text(aes(label=abs(genes)),
             vjust=ifelse(sign(sigPerChr$genes)>0,-0.2,1.2), color="black",
             position = position_dodge(0.9), size=2.9) +
-  geom_richtext(data=facetLabels,aes(label=complexes),x=3.5,y=870,size=4,hjust=0.5,
+  geom_richtext(data=facetLabels,aes(label=complexes),x=3.5,y=865,size=4,
+                hjust=0.5,
                 fill = NA, label.color = NA, label.padding = grid::unit(rep(0, 4), "pt"),
-                family="Arial")
+                family="ArialMT")
 
 p1
 
@@ -284,7 +281,8 @@ for(i in c(1,4)){
   prettyGrp2<-prettyNames[[combnTable[2,i]]]
   df<-geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"),"XvA")]
   names(df)<-c("group1","group2","XvA")
-  df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  #df$contrast<-deparse(substitute(x~v~y,list(x=prettyGrp1,y=prettyGrp2)))
+  df$contrast<-paste0(prettyGrp1," v ",prettyGrp2)
   contrastNames<-c(contrastNames,df$contrast[1])
   if(is.null(allContrasts)){
     allContrasts<-df
@@ -295,12 +293,12 @@ for(i in c(1,4)){
 
 allContrasts$contrast<-factor(allContrasts$contrast,levels=contrastNames,labels=contrastNames)
 p3<-ggplot(allContrasts,aes(x=group1,y=group2)) +
-  facet_wrap(vars(contrast),nrow=2,labeller=label_parsed)+
+  facet_wrap(vars(contrast),nrow=2)+
   geom_point(col="#11111155",size=1) +
   coord_cartesian(xlim=c(minScale,maxScale),ylim=c(minScale,maxScale)) +
   geom_smooth(method=lm,se=F,fullrange=T, linewidth=0.7) + theme_bw(base_size = 12) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
-        legend.position="right", strip.text.x = element_text(size = 12)) +
+        legend.position="right", strip.text.x = element_markdown(size = 12)) +
   geom_hline(yintercept=0,lty=3,col="grey70",) +
   geom_vline(xintercept=0,lty=3,col="grey70") +
   ggpubr::stat_cor(aes(label = after_stat(r.label)), method="pearson",
@@ -385,7 +383,7 @@ cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 xchr$complexes<-complexes[xchr$SMC]
-facetLabels<-xchr %>% dplyr::select(SMC,Loops,complexes) %>% distinct()
+facetLabels<-xchr %>% dplyr::select(SMC,complexes) %>% distinct()
 
 c1<-xchr %>% dplyr::filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% dplyr::summarize(count=n())
 c2<-xchr %>% dplyr::filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% dplyr::filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
@@ -394,23 +392,23 @@ c2$count/c1$count
 
 p4<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T,show.legend=F)+
-  facet_grid(col=vars(SMC),labeller=label_parsed) +coord_cartesian(ylim=c(-0.5,1.7))+
+  facet_grid(col=vars(SMC)) +coord_cartesian(ylim=c(-0.5,1.7))+
   geom_hline(yintercept=0,linetype="dotted",color="grey20") + theme_bw()+
   theme(axis.text.x=element_text(angle=70,hjust=1,size=12),
         axis.text.y=element_text(size=12),
         axis.title.y=element_markdown(),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
         plot.title=element_text(size=12), legend.title = element_blank(),
-        strip.text.x=element_text(size=12))+
+        strip.text.x=element_markdown(size=12))+
   xlab(label=element_blank()) +
   ylab(label="Log<sub>2</sub>FC") +
   #scale_y_continuous(labels=c(expression(Log[2]FC)))+
   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,y_position=1.45,vjust=-0.1,
                         textsize=3.5,margin_top=0)+
-  geom_richtext(data=facetLabels,aes(label=complexes),x=1.5,y=1.7,size=4,hjust=0.5,
+  geom_richtext(data=facetLabels[1,],aes(label=complexes),x=1.5,y=1.7,size=4,hjust=0.5,
                 fill = NA, label.color = NA, label.padding = grid::unit(rep(0, 4), "pt"),
-                family="Arial")
+                family="ArialMT")
   #geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3.5,hjust=0.5)
 
 p4
@@ -422,18 +420,18 @@ p4
 ############################### Final arrangement ------
 pnull<-NULL
 p<-ggarrange(p1,
-             ggarrange(ph1,p3,p4,nrow=1,ncol=3,labels=c("B ","C ","E "),
-                       widths=c(1.2,1,0.8),font.label=list(family="Arial")),
-             nrow=2,ncol=1,heights=c(1,1),labels=c("A "),font.label=list(family="Arial"))
+             ggarrange(ph1,p3,p4,nrow=1,ncol=3,labels=c("B ","C ","D "),
+                       widths=c(1.2,1,0.8),font.label=list(family="ArialMT")),
+             nrow=2,ncol=1,heights=c(1,1),labels=c("A "),font.label=list(family="ArialMT"))
 
-#ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
-p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 14,family="Arial"))
-ggsave(paste0(workDir,"/plots/RNAseq_TEV_Fig5.pdf"),p,device=cairo_pdf,width=21,height=21,
-       units="cm",family="Arial")
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 5", size = 12, hjust=0,
+                                      face="bold", family="ArialMT"))
+ggsave(paste0(workDir,"/plots/Figure_5.pdf"),p,device="pdf",width=21,height=21,
+       units="cm",family="ArialMT")
 #embedFonts(file=paste0(workDir,"/plots/RNAseq_TEV_Fig5.pdf"),outfile=paste0(workDir,"/plots/RNAseq_TEV_Fig5a.pdf"),
 #           fontpaths="/System/Library/Fonts/Supplemental/Arial.ttf")
-ggsave(paste0(workDir,"/plots/RNAseq_TEV_Fig5.png"),p,device=png,width=21,height=21,
-       units="cm", bg="white")
+#ggsave(paste0(workDir,"/plots/Figure_5.png"),p,device=png,width=21,height=21,
+#       units="cm", bg="white")
 
 
 
