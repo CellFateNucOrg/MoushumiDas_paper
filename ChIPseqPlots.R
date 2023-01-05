@@ -220,3 +220,35 @@ for (url in kranzWig$urls){
     file.remove(gsub("\\.gz","",basename(url))
   }
 }
+
+
+## correlate coh-1 with kle-2
+modencodePath<-"/Users/semple/Documents/MeisterLab/Datasets/ChIP_seq_data_GEO/modEncode_SMC"
+coh1bw<-paste0(modencodePath,"/",c("SDQ0809_COH1_fem2_AD_ChIP_Rep1.bigwig",
+                                   "SDQ0809_COH1_fem2_AD_ChIP_Rep2.bigwig",
+                                   "SDQ0812_COH1_FEM2_AD_ChIP_Rep1.bigwig",
+                                   "SDQ0812_COH1_FEM2_AD_ChIP_Rep2.bigwig"))
+
+tiledGnm<-unlist(tileGenome(seqlengths(Celegans),tilewidth = 100))
+smc4<-import("/Users/semple/Documents/MeisterLab/Datasets/Kranz2013_GenomeBiol_PRJNA195898/SMC4_N2_MxEmb_GSE45678_ce11.bw")
+cov<-coverage(smc4,weight=smc4$score)
+tiledGnm<-binnedAverage(tiledGnm,cov,varname="SMC4")
+for(i in 1:length(coh1bw)){
+  coh1<-import(coh1bw[1])
+  seqlevels(coh1)<-seqlevels(Celegans)
+  cov<-coverage(coh1,weight="score")
+  tiledGnm<-binnedAverage(tiledGnm,cov,varname=paste0("COH1_",i))
+}
+head(tiledGnm)
+#xx<-data.frame(as.matrix(mcols(tiledGnm)))
+my_bin <- function(data, mapping, ..., low = "#132B43", high = "#56B1F7") {
+  ggplot(data = data, mapping = mapping) +
+    geom_bin2d(...) +
+    scale_fill_gradient(low = low, high = high)
+}
+library(GGally)
+df<-data.frame(tiledGnm)[6:10]
+p<-GGally::ggpairs(df,
+                   lower = list(continuous = my_bin))
+ggplot2::ggsave(p,paste0(workDir,"/","corGGPAIRS_SMC4_COH1.png"),device="png",
+       width=19,height=19,units="cm")

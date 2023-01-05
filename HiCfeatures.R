@@ -1,5 +1,5 @@
 library(rtracklayer)
-#library(BSgenome.Celegans.UCSC.ce11)
+library(BSgenome.Celegans.UCSC.ce11)
 #library(eulerr)
 library(ggplot2)
 library(dplyr)
@@ -221,8 +221,55 @@ p2<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
 
 p2
 
+head(df)
 
 
+###########################-
+# compartments - correlation: 366tpm-----
+###########################-
+
+### Autosomes
+
+pcas<-data.frame(SMC=c("TEVonly"),
+                 strain =c("366"),
+                 E1=NA, E2=NA)
+
+tpm366<-import(paste0(RNAseqPath,"/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+cov366<-coverage(tpm366,weight="score")
+
+E1files=list.files(paste0(hicFeaturePath,"/otherData"),
+                   pattern="_merge_2000\\.oriented_E1\\.vecs\\.bw")
+E2files=list.files(paste0(hicFeaturePath,"/otherData"),
+                   pattern="_merge_2000\\.oriented_E2\\.vecs\\.bw")
+pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
+pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
+
+listdf<-NULL
+for (grp in pcas$SMC){
+  pca1<-import(paste0(hicFeaturePath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+  pca2<-import(paste0(hicFeaturePath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+  seqlevels(pca1)<-seqlevels(Celegans)
+  seqlevels(pca2)<-seqlevels(Celegans)
+  pca1<-binnedAverage(pca1,cov366,varname="tpm366")
+  pca2<-binnedAverage(pca2,cov366,varname="tpm366")
+
+  df1<-data.frame(pca1)
+  df1$eigen<-"E1"
+  df2<-data.frame(pca2)
+  df2$eigen<-"E2"
+  df<-rbind(df1,df2)
+  #df$compartment<-factor(df$compartment)
+  df$SMC<-grp
+
+  listdf[[grp]]<-df
+}
+
+df<-do.call(rbind,listdf)
+df<-df[df$tpm366>0,]# remove genes with little or no expression
+df<-df[df$seqnames!="chrX",]
+
+cor(df[df$eigen=="E1","score"],log2(df[df$eigen=="E1","tpm366"]),method="spearman")
+cor(df[df$eigen=="E2","score"],log2(df[df$eigen=="E2","tpm366"]),method="spearman")
 
 
 

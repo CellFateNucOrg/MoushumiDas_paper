@@ -642,4 +642,64 @@ for(i in 1:length(E2feat)){
 dev.off()
 
 
+library(ggplot2)
 
+#explanatory figure S4
+grp<-otherPCAs[1]
+prettyGrp<-prettyOtherPCAs[1]
+
+pca1<-readRDS(paste0(pcaPath,"/",pcas$E1[pcas$SMC==grp]))
+pca2<-readRDS(paste0(pcaPath,"/",pcas$E2[pcas$SMC==grp]))
+
+
+
+explainTerciles<-function(binRDS){
+  avrScores<-data.frame(boxStart=seq(1,length(binRDS),30),
+                        boxEnd=c(seq(30,length(binRDS),30),length(binRDS)),
+                        score=NA)
+  for(i in 1:nrow(avrScores)){
+    avrScores$score[i]<-mean(binRDS$score[avrScores$boxStart[i]:avrScores$boxEnd[i]],na.rm=T)
+  }
+  p1<-ggplot(data.frame(binRDS),aes(x=1:length(binRDS),y=score)) + geom_line() + theme_bw() +
+    theme(axis.title=element_blank(),axis.text=element_blank(),panel.grid=element_blank())
+
+  p2<-ggplot(data.frame(binRDS),aes(x=1:length(binRDS),y=score)) + theme_minimal()+
+    geom_rect(data=avrScores,mapping=aes(xmin=boxStart,xmax=boxEnd,
+                                         ymin=1.2,ymax=1.4,
+                                         fill=factor(score)),
+              inherit.aes=F,colour="white",linewidth=0.1) +
+    scale_fill_grey(start=0.1,end=0.8) +
+    #geom_rect(data=avrScores[specialBin,],mapping=aes(xmin=boxStart,xmax=boxEnd,
+    #                                     ymin=1.2,ymax=1.4),
+    #          inherit.aes=F,colour="orange") +
+    theme(legend.position="none",panel.grid=element_blank(),axis.text=element_blank(),
+          axis.title=element_blank())
+
+  movedSpecialBin<-which(order(avrScores$score,decreasing=T)==specialBin)
+  p3<-ggplot(data.frame(binRDS),aes(x=1:length(binRDS),y=score)) + theme_minimal()+
+    geom_rect(data=avrScores,mapping=aes(xmin=boxStart,xmax=boxEnd,
+                                         ymin=1.2,ymax=1.4,
+                                         fill=factor(score, levels=score)),
+              inherit.aes=F,colour="white",linewidth=0.1) +
+    scale_fill_grey(start=0.1,end=0.8) +
+    #geom_rect(data=avrScores[movedSpecialBin,],mapping=aes(xmin=boxStart,xmax=boxEnd,
+    #                                                  ymin=1.2,ymax=1.4,fill=NULL),
+    #          inherit.aes=F,colour="orange") +
+    theme(legend.position="none",panel.grid=element_blank(),
+          axis.text=element_blank(),
+          axis.title=element_blank()) +
+    geom_vline(xintercept=c(avrScores$boxEnd[ceiling(nrow(avrScores)/3)],
+                            avrScores$boxEnd[ceiling(nrow(avrScores)*2/3)]),col="red")
+  p<-ggpubr::ggarrange(p1,p2,p3,nrow=3)
+  return(p)
+}
+
+#ch2<-pca2[seqnames(pca2)=="chrII"]
+p1<-explainTerciles(ref1[seqnames(ref1)=="chrII"])
+p2<-explainTerciles(ref2[seqnames(ref2)=="chrII"])
+p3<-explainTerciles(pca1[seqnames(pca1)=="chrII"])
+p4<-explainTerciles(pca2[seqnames(pca2)=="chrII"])
+
+p<-ggpubr::ggarrange(p1,p3,p2,p4,nrow=2,ncol=2)
+p
+ggsave("./plots/explainTerciles.pdf",p,device="pdf",width=16,height=10,units="cm")
