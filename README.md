@@ -48,7 +48,7 @@ Created using _RNAseqFigSupl_TEV.R_ script
 Created using _RNAseqFigSupl_TEV.R_ script
 
 ### Figure S9
-Panels F&G Created using _RNAseqFigSupl_TEV.R_ script
+Panels F&G Created using _RNAseqFigSupl_deg.R_ script
 
 ### Figure S11
 Created using _RNAseqFigSupl_deg.R_ script
