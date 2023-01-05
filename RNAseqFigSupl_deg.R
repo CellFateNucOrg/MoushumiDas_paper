@@ -669,9 +669,9 @@ p<-ggarrange(p11,ph11,nrow=1,ncol=2,labels=c("F ","G "),
 
 #ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
 p<-annotate_figure(p, top = text_grob("Das et al., supplementary Figure 9", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig9.pdf"),p,device="pdf",width=7,height=7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqDegwithHiC_SuplFig9.pdf"),p,device="pdf",width=7,height=7,units="cm")
 
-ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig9.png"),p,device="png",width=7,height=7,units="cm",
+ggsave(paste0(workDir,"/plots/RNAseqDegwithHiC_SuplFig9.png"),p,device="png",width=7,height=7,units="cm",
        bg="white")
 
 
