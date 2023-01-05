@@ -499,9 +499,9 @@ p4<-ggarrange(plotlist=plotList[c(1,3,5,2,4,6)],ncol=3,nrow=2)
 p<-ggarrange(ggarrange(ggarrange(p1,p2,nrow=2,heights=c(1.2,2),labels=c("A ","B ")),p3,
           ncol=2,widths=c(2,1),labels=c("","C ")),
           p4,nrow=2,heights=c(2,1),labels=c("","D "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S11", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1_FigS11.pdf"),p,device=cairo_pdf,width=21,height=29.7,units="cm")
-ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1_FigS11.png"),p,device=png,width=21,height=29.7,,unit="cm",bg="white")
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S10", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1_FigS10.pdf"),p,device=cairo_pdf,width=21,height=29.7,units="cm")
+ggsave(paste0(workDir,"/plots/RNAseqSupl_deg1_FigS10.png"),p,device=png,width=21,height=29.7,,unit="cm",bg="white")
 
 
 
@@ -668,10 +668,10 @@ p<-ggarrange(p11,ph11,nrow=1,ncol=2,labels=c("F ","G "),
                        widths=c(1,1.1))
 
 #ggsave(paste0(workDir,"/plots/RNAseq_TEV.png"),p,device="png",width=10,height=10)
-p<-annotate_figure(p, top = text_grob("Das et al., supplementary Figure ?", size = 14))
-ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig.pdf"),p,device="pdf",width=7,height=7,units="cm")
+p<-annotate_figure(p, top = text_grob("Das et al., supplementary Figure 9", size = 14))
+ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig9.pdf"),p,device="pdf",width=7,height=7,units="cm")
 
-ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig.png"),p,device="png",width=7,height=7,units="cm",
+ggsave(paste0(workDir,"/plots/RNAseqTEVwithHiC_SuplFig9.png"),p,device="png",width=7,height=7,units="cm",
        bg="white")
 
 

@@ -148,7 +148,7 @@ p1a<-ggplot(df,aes(x=SMC,y=width)) +
         text = element_text(size = 12))+
   #geom_hline(yintercept=8000) +
   stat_summary(fun="mean",geom="point",shape=4,size=2)+
-  geom_segment(x=1,y=91000,xend=2,yend=91000,size=0.01)+
+  geom_segment(x=1,y=91000,xend=2,yend=91000,linewidth=0.01)+
   geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000)#+
   # geom_text(data = df %>% group_by(AB, SMC, XvA) %>%
   #             summarize(Count = n(),width=86000),
@@ -211,7 +211,7 @@ df$bin<-factor(df$bin,levels=1:50)
 subdf<-df[df$SMC %in% c("wt","TEVonly"),]
 subdf<-subdf[subdf$bin %in% 1:50,]
 p2<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
-  geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
+  geom_boxplot(outlier.shape=NA,linewidth=0.1,fill="lightblue") + facet_grid(SMC~pca)+
   coord_cartesian(ylim=c(-14,14)) + theme_bw()+
   #scale_fill_manual(values=c("white","grey70"))+
   geom_hline(yintercept=0,col="black")+
@@ -445,16 +445,23 @@ p4a
 # p<-annotate_figure(p, top = text_grob("Das et al., Figure 2", size = 14))
 # ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2.pdf"),p,device="pdf",width=21,height=14,units="cm")
 
-p<-ggarrange(ggarrange(p2,p4a,nrow=2,labels=c("","D")),p1a,ncol=2,labels=c("C","H"))
+p<-ggarrange(p2,p4a,nrow=2,labels=c("C","D"))
 p
 
 p<-annotate_figure(p, top = text_grob("Das et al., Figure 2", size = 14))
-ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2a.pdf"),p,device="pdf",width=21,height=14,units="cm")
+ggsave(paste0(workDir,"/plots/HiCfeatures_Fig2.pdf"),p,device="pdf",width=8,height=14,units="cm")
+
+
+p<-ggarrange(p1a,ncol=1,labels=c("I"))
+p
+
+p<-annotate_figure(p, top = text_grob("Das et al., Figure 3", size = 14))
+ggsave(paste0(workDir,"/plots/HiCfeatures_Fig3.pdf"),p,device="pdf",width=10,height=14,units="cm")
 
 
 p<-ggarrange(p4,p3,ncol=2,labels=c("B",""))
 p
 p<-annotate_figure(p, top = text_grob("Das et al., Figure S2", size = 14))
-ggsave(paste0(workDir,"/plots/HiCfeatures_FigS2.pdf"),p,device="pdf",width=21,height=7,units="cm")
+ggsave(paste0(workDir,"/plots/HiCfeatures_FigS2.pdf"),p,device="pdf",width=21,height=14,units="cm")
 
 
