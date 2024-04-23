@@ -418,7 +418,7 @@ p4<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   xlab(label=element_blank()) +
   ylab(bquote(Log[2]~FC)) +
   #scale_y_continuous(labels=c(expression(Log[2]FC)))+
-  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
+  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,y_position=1.45,vjust=-0.1,
                         textsize=3,margin_top=0)+
   geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3.5,hjust=0.5)
