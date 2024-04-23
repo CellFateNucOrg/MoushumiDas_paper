@@ -177,6 +177,6 @@ p<-annotate_figure(p, top = text_grob("Das et al., Figure S1",
 
 
 p
-ggsave(paste0(finalFigDir,"/Figure_S1_SMCcleavageQuantification.pdf"),plot=p,device="pdf",width=19,height=19,
+ggsave(paste0(finalFigDir,"/Fig_S1_SMCcleavageQuantification.pdf"),plot=p,device="pdf",width=19,height=19,
        unit="cm")
 
