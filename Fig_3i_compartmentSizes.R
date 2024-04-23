@@ -120,7 +120,7 @@ dfsum<-df %>% group_by(SMC,XvA,AB) %>% summarise(mean=mean(width),median=median(
 dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
 
 
-st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr")
+st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr",method="wilcox.test")
 st$padj.format<-ufs::formatPvalue(st$p.adj,digits=3)
 p1a<-ggplot(df,aes(x=SMC,y=width)) +
   geom_boxplot(outlier.shape=NA,notch=T,varwidth=T,fill="lightblue",alpha=0.5) +
