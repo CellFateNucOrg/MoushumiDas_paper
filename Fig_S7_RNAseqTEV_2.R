@@ -23,11 +23,12 @@ theme_set(
   theme_classic()+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          title=element_text(size=10),
-          axis.title.y=ggtext::element_markdown(size=10),
-          axis.title.x=ggtext::element_markdown(size=10),
-          strip.text = element_text(size = 10),
-          axis.text=element_text(size=10)
+          title=element_text(size=9),
+          axis.title.y=ggtext::element_markdown(size=9),
+          axis.title.x=ggtext::element_markdown(size=9),
+          strip.text = element_text(size = 9),
+          axis.text=element_text(size=9),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.8)
     )
 )
 
@@ -371,17 +372,17 @@ p3a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
   #geom_jitter()+
   facet_grid(col=vars(SMC),labeller=label_parsed) +coord_cartesian(ylim=c(-0.5,1.65))+
-  ggtitle(paste0("LFC near ",clickedBatch," loop anchors (",
+  ggtitle(paste0("LFC near loop anchors (",
                  cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and not at anchors (",
                  cntTbl$count[cntTbl$Loops=="Not anchor"]," genes) in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
   theme(axis.text.x=element_text(angle=45,hjust=1), axis.title.x=element_blank(),
-        plot.title=element_text(size=10), legend.title = element_blank())+
+        plot.title=element_text(size=9), legend.position = "none")+
   ylab("Log<sub>2</sub>FC")+
   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
                         textsize=3,margin_top=0)+
-  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3.5,hjust=0.5)
+  geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3,hjust=0.5)
 
 p3a
 
@@ -392,7 +393,7 @@ p3b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
   facet_wrap(.~measure) + ggtitle(" ") +  coord_cartesian(ylim=c(-5,20)) +
   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
-        plot.title=element_text(size=10),axis.title.x=element_blank()) +
+        plot.title=element_text(size=9),axis.title.x=element_blank()) +
   ylab("Log<sub>2</sub>(base mean counts)")+
   ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
@@ -407,8 +408,9 @@ p3
 
 
 p<-ggarrange(p1,p2,p3,nrow=3,heights=c(1,1.2,1),labels=c("a ","b ","c "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S7", size = 14))
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S7", size = 12))
 ggsave(paste0(finalFigDir,"/Fig_S7_RNAseqTEV_2.pdf"),p,device="pdf",width=21,height=29.7,
        unit="cm")
 ggsave(paste0(finalFigDir,"/Fig_S7_RNAseqTEV_2.png"),p,device="png",width=21,height=29.7,
        unit="cm",bg="white")
+

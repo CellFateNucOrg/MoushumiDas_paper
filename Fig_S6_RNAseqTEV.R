@@ -25,7 +25,8 @@ theme_set(
           axis.title.y=ggtext::element_markdown(size=10),
           axis.title.x=ggtext::element_markdown(size=10),
           strip.text = element_text(size = 10),
-          axis.text=element_text(size=10)
+          axis.text=element_text(size=10),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.8)
     )
 )
 
