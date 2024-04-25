@@ -17,8 +17,7 @@ if(!dir.exists(finalFigDir)){
   dir.create(finalFigDir)
 }
 
-
-myTheme<-theme_set(
+theme_set(
     theme_classic()+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -50,14 +49,8 @@ complexes<-c("condensin~I/I^DC", "condensin~II", "cohesin^{SCC-1}","cohesin^{COH
 names(complexes)<-useContrasts
 
 names(contrastsOI)<-useContrasts
-# strains<-c("366","382","775","784","828","844")
-# strain<-factor(strains,levels=strains)
-# SMC<-strain
-# levels(SMC)<-c("TEVonly",useContrasts)
 
-#controlGrp<-levels(SMC)[1] # control group
 groupsOI<-useContrasts
-
 
 source(paste0(projectDir,"/functions.R"))
 
@@ -68,7 +61,7 @@ lfcVal=0.5
 padjVal=0.05
 filterPrefix<-"filtCycChrAX"
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterPrefix,"/",filterPrefix,"_")
-outPath=paste0(projectDir)
+
 
 
 ########################-
@@ -81,7 +74,7 @@ localPadj=padjVal
 localLFC=0
 for (grp in groupsOI){
   print(grp)
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-readRDS(paste0(projectDir,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[!is.na(salmon$padj),]
   #nrow(filterResults(salmon,padj=0.05,lfc=-0.5,direction="lt",chr="autosomes"))
   print(paste0(nrow(salmon)," genes before filtering"))
@@ -190,7 +183,7 @@ p1
 ##################-
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-readRDS(paste0(projectDir,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   sigTables[[grp]]<-as.data.frame(salmon)
   sigTables[[grp]]$SMC<-grp
 }
@@ -276,7 +269,7 @@ p2
 plotList<-list()
 geneTable<-NULL
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-readRDS(paste0(projectDir,"/",fileNamePrefix,contrastsOI[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   p<-plotVolcanoXvA(salmon,addLegend=F) +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
