@@ -21,11 +21,11 @@ theme_set(
     theme_classic()+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          title=element_text(size=10),
-          axis.title.y=ggtext::element_markdown(size=10),
-          axis.title.x=ggtext::element_markdown(size=10),
-          strip.text = element_text(size = 10),
-          axis.text=element_text(size=10),
+          title=element_text(size=9),
+          axis.title.y=ggtext::element_markdown(size=9),
+          axis.title.x=ggtext::element_markdown(size=9),
+          strip.text = element_text(size = 9),
+          axis.text=element_text(size=9),
           panel.border = element_rect(colour = "black", fill=NA, size=0.8)
     )
 )

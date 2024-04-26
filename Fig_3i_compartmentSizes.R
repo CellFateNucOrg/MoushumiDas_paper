@@ -22,7 +22,10 @@ theme_set(
           panel.grid.minor = element_blank(),
           title=element_text(size=9),
           axis.title.y=ggtext::element_markdown(size=9),
-          axis.title.x=ggtext::element_markdown(size=9)
+          axis.title.x=ggtext::element_markdown(size=9),
+          strip.text = element_text(size = 9),
+          axis.text=element_text(size=9),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.8)
     )
 )
 
@@ -35,7 +38,7 @@ RNAseqPath=paste0(projectDir,"/tracks/2021_RNAseq_MDas")
 
 pcas<-data.frame(SMC=c("TEVonly","dpy26"),
                  strain =c("366","382"),
-                 prettyNames=c("TEV only", "dpy-26cs"),
+                 prettyNames=c("TEV<Br>control", "<i>dpy-26<sup>cs</sup></i>"),
                  E1=NA, E2=NA)
 
 
@@ -105,7 +108,7 @@ for (grp in pcas$SMC){
 lapply(listdf,dim)
 df<-do.call(rbind,listdf)
 row.names(df)<-NULL
-df$XvA<-ifelse(df$seqnames=="chrX","chrX","Autosomes")
+df$XvA<-ifelse(df$seqnames=="chrX","Chromosome X","Autosomes")
 
 df<-df[df$eigen=="E2",]
 
@@ -114,23 +117,28 @@ df<-df[!is.na(df$AB),]
 df$SMC<-factor(df$SMC,levels=pcas$SMC,labels=pcas$prettyNames)
 
 
-med<-df%>%filter(SMC=="TEVonly") %>% group_by(XvA,AB) %>% summarise(med=median(width))
+med<-df%>%filter(SMC=="TEV<Br>control") %>% group_by(XvA,AB) %>% summarise(med=median(width))
 
-dfsum<-df %>% group_by(SMC,XvA,AB) %>% summarise(mean=mean(width),median=median(width))
-dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV only"]
+dfsum<-df %>% group_by(SMC,XvA,AB) %>% summarise(mean=mean(width),median=median(width),count=n(),width=0)
+dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV<Br>control"]
 
 
-st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr",method="wilcox.test")
+st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr",
+                  method="wilcox.test")
 st$padj.format<-ufs::formatPvalue(st$p.adj,digits=3)
-p1a<-ggplot(df,aes(x=SMC,y=width)) +
-  geom_boxplot(outlier.shape=NA,notch=T,varwidth=T,fill="lightblue",alpha=0.5) +
-  scale_fill_manual(values=c("lightblue"))+
-  coord_cartesian(ylim = c(0, 100000))+
+p1a<-ggplot(df,aes(x=SMC,y=width/1e3,fill=AB)) +
+  geom_boxplot(outlier.shape=NA,notch=T,varwidth=T,alpha=0.9) +
+  scale_fill_manual(values=c("red","lightblue"))+
+  coord_cartesian(ylim = c(0, 100000/1e3))+
   facet_grid(rows=vars(XvA),cols=vars(AB)) +
-  theme(text = element_text(size = 12))+
+  theme(text = element_text(size = 12), axis.title.x=element_blank(),
+        axis.text.x=ggtext::element_markdown(angle=45,hjust=1),
+        legend.position="none")+
   stat_summary(fun="mean",geom="point",shape=4,size=2)+
-  geom_segment(x=1,y=91000,xend=2,yend=91000,linewidth=0.01)+
-  geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000)#+
+  geom_segment(x=1,y=91000/1e3,xend=2,yend=91000/1e3,linewidth=0.01)+
+  geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000/1e3)+
+  ylab("Domain size (kb)") +
+  geom_text(data=dfsum,mapping=aes(label=count),size=2.7)
 
 p1a
 

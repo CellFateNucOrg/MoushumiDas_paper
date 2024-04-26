@@ -23,7 +23,10 @@ theme_set(
           panel.grid.minor = element_blank(),
           title=element_text(size=9),
           axis.title.y=ggtext::element_markdown(size=9),
-          axis.title.x=ggtext::element_markdown(size=9)
+          axis.title.x=ggtext::element_markdown(size=9),
+          strip.text = element_text(size = 9),
+          axis.text=element_text(size=9),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.8)
     )
 )
 
@@ -33,8 +36,7 @@ theme_set(
 
 
 states<-import.bed(paste0(publicDataDir,"/chromStates_L3_Evans2016_ce11.bed"))
-#domains<-import.bed("./publicData/chromDomains_L3_Evans2016_ce11.bed")
-#seqlevels(domains)<-seqlevels(states)
+
 
 stateClrs<-c("#fe0003","#f59745","#008100","#74943a",
              "#c4d69c","#05ff7f","#ceff65","#fd0082",
@@ -121,13 +123,10 @@ fracKept # 0.75 of bins
 
 with(df[df$SMC=="TEVonly" & df$pca=="E1",], cor.test(score,log2(tpm366),method="spearman"))
 with(df[df$SMC=="TEVonly" & df$pca=="E2",], cor.test(score,log2(tpm366),method="spearman"))
+nrow(df[df$SMC=="TEVonly" & df$pca=="E1",]) # number of regions
 
 ggplot(df,aes(x=score,y=log2(tpm366))) +
-  #geom_point(colour="#00007733") +
-  #geom_density2d_filled()+
-  #geom_hex(bins=100)+
   geom_bin2d(bins=100)+
-  #stat_density_2d(aes(fill = ..level..), geom = "polygon") +
   facet_grid(cols=vars(pca)) + geom_smooth(method="lm") +
   stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
   ggtitle(paste0(corMethod," correlation of PCA eigen value vs PMW366 TPM (for bins > ",
@@ -195,16 +194,18 @@ df<-do.call(rbind,listdf)
 df$SMC<-factor(df$SMC,levels=pcas$SMC)
 df$bin<-factor(df$bin,levels=1:50)
 
-subdf<-df[df$SMC %in% c("TEVonly") & df$seqnames!="chrX",]
+subdf<-df[df$SMC %in% c("TEVonly") & df$seqnames!="chrX" & !is.na(df$bin),]
 p1<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
-  geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-  coord_cartesian(ylim=c(-12,12)) +
+  geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") +
+  coord_cartesian(ylim=c(-12,12)) + facet_grid(cols=vars(pca))+
   geom_hline(yintercept=0,col="red")+
-  ggtitle(paste0("Autosomes")) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
+  ggtitle(paste0("Autosomes")) + ylab("Log<sub>2</sub>TPM")+
+  theme(legend.position="none",axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),axis.title.x=element_blank(),
+        plot.title = element_text(hjust = 1))
 
-binCount<-subdf %>% group_by(bin) %>% summarise(count=n())
+p1
+binCount<-subdf %>% group_by(bin,pca) %>% summarise(count=n())
 binCount
 
 # chromatin states-------
@@ -238,14 +239,17 @@ df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
 df$bin<-factor(df$bin,levels=1:50)
 
-
+subdf<-df[df$SMC %in% c("TEVonly") & df$seqnames!="chrX" & !is.na(df$bin),]
 # autosomes
-p2<-ggplot(df[df$XvA=="A",],aes(x=bin,y=stateWidth,fill=state)) +
+p2<-ggplot(df[df$XvA=="A",],aes(x=bin,y=stateWidth/1e6,fill=state)) +
   geom_col(position="stack") + scale_fill_manual(values=stateClrs) +
-  theme(legend.position = "none") +
-  facet_grid(cols=vars(compartment))+ ggtitle(paste0("Autosomes"))
+  theme(legend.position = "none", axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),plot.title = element_text(hjust = 1)) +
+  facet_grid(cols=vars(compartment))+ ggtitle(paste0("Autosomes"))+
+  ylab("bp per chromatin state (Mb)") + xlab("Eigenvector bin")
 
 
+p2
 
 
 p<-ggpubr::ggarrange(p1,p2,nrow=2,col=1,labels=c("c ","d "))
