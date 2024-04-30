@@ -1,6 +1,6 @@
 # Mouhsumi Das et al. paper figures
 
-Partial code and data objects for figures from Das et al. 
+Code and data objects for RNAseq figures from Das _et al._ (2024) *Condensin I folds the Caenorhabditis elegans genome* 
 
 ## Main figures
 
