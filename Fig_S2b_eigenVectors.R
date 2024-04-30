@@ -1,15 +1,11 @@
 library(rtracklayer)
-#library(GenomicInteractions)
 library(ggplot2)
-#library(EnhancedVolcano)
 library(BSgenome.Celegans.UCSC.ce11)
 library(dplyr)
 library(ggpubr)
 library(ggpubr)
 
 source("functions.R")
-#source("./variableSettings.R")
-
 
 projectDir="."
 otherDataDir=paste0(projectDir,"/otherData")
@@ -88,53 +84,6 @@ E2files=list.files(paste0(projectDir,"/otherData"),
                    pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
-# listdf<-NULL
-# grp=pcas$SMC[1]
-# for (grp in pcas$SMC){
-#
-#   pca1<-readRDS(paste0(projectDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
-#   pca2<-readRDS(paste0(projectDir,"/otherData/",pcas$E2[pcas$SMC==grp]))
-#
-#   pca1<-GRanges(pca1)
-#   pca2<-GRanges(pca2)
-#   start(pca1)<-start(pca1)+1
-#   start(pca2)<-start(pca2)+1
-#   seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-#   seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-#
-#   pca1<-binnedAverage(pca1,cov366,varname="tpm366",na.rm=T)
-#   pca2<-binnedAverage(pca2,cov366,varname="tpm366",na.rm=T)
-#
-#   df1<-data.frame(pca1)
-#   df2<-data.frame(pca2)
-#
-#   df1$pca<-"E1"
-#   df2$pca<-"E2"
-#
-#   colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
-#   colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
-#
-#   df<-rbind(df1,df2)
-#   df$SMC<-grp
-#
-#   listdf[[grp]]<-df
-# }
-#
-# df<-do.call(rbind,listdf)
-# df$SMC<-factor(df$SMC,levels=pcas$SMC)
-# df$bin<-factor(df$bin,levels=1:50)
-#
-# subdf<-df[df$SMC %in% c("wt","TEVonly") & df$seqnames!="chrX",]
-# p1<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
-#   geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-#   coord_cartesian(ylim=c(-12,12)) +
-#   geom_hline(yintercept=0,col="red")+
-#   ggtitle(paste0("366 TPM in different autosomal bins of digitized pca")) +
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#         legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
-#
-# binCount<-subdf %>% group_by(SMC,bin) %>% summarise(count=n())
-
 
 
 listdf<-NULL
@@ -191,48 +140,7 @@ E2files=list.files(paste0(projectDir,"/otherData"),
                    pattern="_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")
 pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_cis_X_noA_E1\\.digitized\\.rds")))]
 pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")))]
-# listdf<-NULL
-# for (grp in pcas$SMC){
-#   pca1<-readRDS(paste0(projectDir,"/otherData/",pcas$E1[pcas$SMC==grp]))
-#   pca2<-readRDS(paste0(projectDir,"/otherData/",pcas$E2[pcas$SMC==grp]))
-#
-#   pca1<-GRanges(pca1)
-#   pca2<-GRanges(pca2)
-#   start(pca1)<-start(pca1)+1
-#   start(pca2)<-start(pca2)+1
-#   seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-#   seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-#
-#   pca1<-binnedAverage(pca1,cov366,varname="tpm366",na.rm=T)
-#   pca2<-binnedAverage(pca2,cov366,varname="tpm366",na.rm=T)
-#
-#   df1<-data.frame(pca1)
-#   df2<-data.frame(pca2)
-#
-#   df1$pca<-"E1"
-#   df2$pca<-"E2"
-#
-#   colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
-#   colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
-#
-#   df<-rbind(df1,df2)
-#   df$SMC<-grp
-#
-#   listdf[[grp]]<-df
-# }
-#
-# df<-do.call(rbind,listdf)
-# df$SMC<-factor(df$SMC,levels=pcas$SMC)
-# df$bin<-factor(df$bin,levels=1:50)
-#
-# subdf<-df[df$SMC %in% c("wt","TEVonly"),]
-# p3<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
-#   geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-#   coord_cartesian(ylim=c(-12,12)) +
-#   geom_hline(yintercept=0,col="red")+
-#   ggtitle(paste0("366 TPM in different chrX bins of digitized pca")) +
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#         legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
 
 listdf<-NULL
 for (grp in pcas$SMC){
