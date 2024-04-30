@@ -10,6 +10,7 @@ library(Cairo)
 library(BSgenome.Celegans.UCSC.ce11)
 library(ComplexHeatmap)
 library(gridtext)
+library(rstatix)
 
 projectDir="."
 otherDataDir=paste0(projectDir,"/otherData")
@@ -18,6 +19,8 @@ finalFigDir=paste0(projectDir,"/finalFigures")
 if(!dir.exists(finalFigDir)){
   dir.create(finalFigDir)
 }
+
+source(paste0(projectDir,"/functions_plotting.R"))
 
 theme_set(
   theme_classic()+
@@ -210,19 +213,15 @@ for (grp in groupsOI){
 combnTable<-combn(1:length(groupsOI),m=2)
 
 lfcCols<-grep("_lfc$",names(geneTable))
-#minScale<-min(geneTable[,lfcCols])*1.05
-#maxScale<-max(geneTable[,lfcCols])*1.05
-#minScale<- -2
-#maxScale<- 2
+
 minScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.0001)*1.05
 maxScale<-quantile(unlist(geneTable[,lfcCols[c(2,3)]]),0.9999)*1.05
 
 geneTable$XvA<-ifelse(geneTable$chr=="chrX","chrX","Autosomes")
-#tmp<-geneTable
+
 
 geneTable<-na.omit(geneTable)
 allContrasts<-NULL
-#contrastNm<-NULL
 contrastNames<-c()
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
@@ -266,49 +265,24 @@ p2
 
 
 ##########################-
-## Manual clicked loops------
+## Loops------
 ##########################-
 
-### new clicked loops
-#clickedBatch="366"
-#clickedBatch="382"
-
-loopsOrAnchors<-"anchors"
+rnaseqTPMpath<-paste0(projectDir,"/tracks/2021_RNAseq_MDas")
+rnaTPM<-import(paste0(rnaseqTPMpath,"/PMW366_TPM_avr.bw"))
+cov<-coverage(rnaTPM,weight="score")
+#loopsOrAnchors<-"anchors"
 ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
+ceTiles<-ceTiles[seqnames(ceTiles)=="chrX"]
 
-if(loopsOrAnchors=="loops"){
-  loops<-import(paste0(projectDir,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
-  grl<-zipup(loops)
-  anchor1<-do.call(c,lapply(grl,"[",1))
-  anchor2<-do.call(c,lapply(grl,"[",2))
-  mcols(anchor1)<-mcols(loops)
-  mcols(anchor2)<-mcols(loops)
 
-  anchor1$loopNum<-paste0("loop",1:length(anchor1))
-  anchor2$loopNum<-paste0("loop",1:length(anchor2))
-  anchors<-sort(c(anchor1,anchor2))
+anchors<-import(paste0(projectDir,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
+seqlevels(anchors)<-seqlevels(Celegans)
+anchors<-resize(anchors,width=10000,fix="center")
 
-  #separate anchors from inside tads
-  tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-  # tads_in<-reduce(tads_in)
-  tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
 
-  ol<-findOverlaps(ceTiles,tads_in)
-  tenkbInTads<-ceTiles[unique(queryHits(ol))]
-
-  anchors<-resize(anchors,width=10000,fix="center")
-  reduce(anchors)
-
-  ol<-findOverlaps(tenkbInTads,anchors)
-  tenkbInTads<-tenkbInTads[-queryHits(ol)]
-} else {
-  anchors<-import(paste0(projectDir,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
-  anchors<-resize(anchors,width=10000,fix="center")
-  ol<-findOverlaps(ceTiles,anchors)
-  tenkbInTads<-ceTiles[-queryHits(ol)]
-  clickedBatch="382"
-}
-
+ol<-findOverlaps(ceTiles,anchors)
+tenkbInTads<-ceTiles[-queryHits(ol)]
 
 
 width(tenkbInTads)
@@ -347,12 +321,6 @@ for (grp in useContrasts){
 
 
 
-#pvalsDiff<-1-unlist(statList)
-#names(pvalsDiff)<-prettyNamesAll
-
-#aux_sdc3bg      dpy26  sdc3dpy26       kle2       scc1       coh1   scc1coh1
-#0.8653     0.0001     0.0013     0.3441     0.3545     0.1655     0.2047
-
 ## focus on chrX loops
 dataTbl<-do.call(rbind,dataList)
 xchr<-dataTbl[dataTbl$seqnames=="chrX",]
@@ -361,16 +329,23 @@ cntTbl<-xchr %>% dplyr::group_by(SMC,Loops) %>% dplyr::summarise(count=n()) %>%
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts,labels=prettyNames)
 xchr$complexes<-complexes[xchr$SMC]
+xchr$Loops<-factor(xchr$Loops,levels=c("Anchor", "Not anchor"))
 facetLabels<-xchr %>% dplyr::select(SMC,Loops,complexes) %>% distinct()
+facetLabels$complexes[facetLabels$Loops=="Anchor"]<-""
+
 
 c1<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% summarize(count=n())
 c2<-xchr %>% filter(SMC=="italic(\"dpy-26\"^cs)") %>% group_by(SMC, Loops) %>% filter(padj< 0.05, log2FoldChange>0.5) %>% summarize(count=n())
 
 c2$count/c1$count
 
-p3a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-  geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-  #geom_jitter()+
+wilcoxt<-xchr %>% group_by(SMC) %>% wilcox_test(log2FoldChange~Loops) %>%
+ adjust_pvalue(method="fdr") %>% p_format(new.col=T,accuracy=1e-32) %>%
+  add_x_position(x="Loops",group="SMC")
+
+
+p3a<-ggplot()+
+  geom_boxplot(data=xchr,mapping=aes(x=Loops,y=log2FoldChange,fill=Loops),notch=T,outlier.shape=NA,varwidth=T)+
   facet_grid(col=vars(SMC),labeller=label_parsed) +coord_cartesian(ylim=c(-0.5,1.65))+
   ggtitle(paste0("LFC near loop anchors (",
                  cntTbl$count[cntTbl$Loops=="Anchor"]," genes) and not at anchors (",
@@ -379,14 +354,12 @@ p3a<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   theme(axis.text.x=element_text(angle=45,hjust=1), axis.title.x=element_blank(),
         plot.title=element_text(size=9), legend.position = "none")+
   ylab("Log<sub>2</sub>FC")+
-  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
-                        map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
-                        textsize=3,margin_top=0)+
+  stat_pvalue_manual(data=wilcoxt,y.position=1.4,label="p.adj.format",tip.length=0.001,
+                     label.size=3)+
   geom_text(data=facetLabels,aes(label=complexes),parse=T,x=1.5,y=1.65,size=3,hjust=0.5)
-
 p3a
 
-
+# compare base mean counts from DESeq2
 xchr$measure<-"Expression"
 bm<- data.frame(xchr) %>% distinct(wormbaseID,baseMean,measure,Loops)
 p3b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
@@ -395,7 +368,7 @@ p3b<-ggplot(bm,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1),
         plot.title=element_text(size=9),axis.title.x=element_blank()) +
   ylab("Log<sub>2</sub>(base mean counts)")+
-  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "Not anchor")),
+  ggsignif::geom_signif(test=wilcox.test,comparisons = list(c("Anchor", "Not anchor")),
                         map_signif_level = F,tip_length=0.001,vjust=-0.1,
                         textsize=3,margin_top=0.1)
 

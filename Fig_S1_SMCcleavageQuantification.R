@@ -40,11 +40,13 @@ levels(tbl$kleisin)<-c("SCC-1","COH-1","DPY-26","KLE-2")
 # Normalise HS to NHS
 tblNormToNHS<-tbl %>% pivot_wider(id_cols=c(wb,kleisin),names_from=temp,values_from=normToTub) %>% mutate(normToNHS=HS/NHS)
 
-tblstatsum<-tblNormToNHS %>% group_by(kleisin) %>% summarise(count=n(),avr=mean(normToNHS),sdev=sd(normToNHS),se=sdev/sqrt(count),label=paste0(round(avr,2),"+-",round(se,2),"\nn=",count))
+tblstatsum<-tblNormToNHS %>% group_by(kleisin) %>%
+  summarise(count=n(),avr=mean(normToNHS),sdev=sd(normToNHS),
+            se=sdev/sqrt(count),
+            label=paste0(round(avr,2),"+-",round(se,2),"\nn=",count))
 
 p1<-ggplot(tblNormToNHS,aes(x=kleisin,y=normToNHS,colour=kleisin)) +
   geom_jitter (width=0.2,size=4)+
-  #scale_color_brewer(palette = "Paired")+
   scale_color_manual(values=c("red","orange","darkblue","darkgreen")) +
   ggtitle("Fraction remaining of full length protein after cleavage") +
   ylab("Ratio of protein after heatshock / no heatshock") +
@@ -57,7 +59,10 @@ p1
 # Normalise to NHS coh-1
 tblNormToCOH1<-tbl %>% filter(temp==c("NHS")) %>% group_by(wb) %>% mutate(COH1_NHS=normToTub[kleisin=="COH-1"],normToCOH1=normToTub/COH1_NHS)
 
-tblstatsum<-tblNormToCOH1 %>% group_by(kleisin) %>% summarise(count=n(),avr=mean(normToCOH1),sdev=sd(normToCOH1),se=sdev/sqrt(count),label=paste0(round(avr,2),"+-",round(se,2),"\nn=",count))
+tblstatsum<-tblNormToCOH1 %>% group_by(kleisin) %>%
+  summarise(count=n(),avr=mean(normToCOH1),sdev=sd(normToCOH1),
+            se=sdev/sqrt(count),
+            label=paste0(round(avr,2),"+-",round(se,2),"\nn=",count))
 
 p2<-ggplot(tblNormToCOH1,aes(x=kleisin,y=normToCOH1,colour=kleisin)) +
   geom_jitter (width=0.2,size=4)+
@@ -162,7 +167,7 @@ p3<-ggplot(head,aes(x=HSvNHS,y=intensity_meanMinusBg,color=HSvNHS)) +
   coord_cartesian(ylim=c(0,20)) +
   ggtitle(paste0("Mean intensity per worm head"))+
   xlab("") + ylab("Mean Intensity (A.U.)")+
-  stat_summary(fun.data = give.n, geom = "text", fun.y = 20)
+  stat_summary(fun.data = give.n, geom = "text", fun = 20)
 p3
 
 

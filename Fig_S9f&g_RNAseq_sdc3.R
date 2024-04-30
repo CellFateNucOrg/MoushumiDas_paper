@@ -11,6 +11,7 @@ library(BSgenome.Celegans.UCSC.ce11)
 library(ComplexHeatmap)
 library(seriation)
 library(gridtext)
+library(rstatix)
 
 projectDir="."
 otherDataDir=paste0(projectDir,"/otherData")
@@ -73,6 +74,9 @@ allSig<-do.call(rbind,sigTables)
 rownames(allSig)<-NULL
 allSig$chr<-gsub("chr","",allSig$chr)
 allSig$SMC<- factor(allSig$SMC,levels=groupsOI,labels=prettyNames)
+allSig$XvA<-factor(ifelse(allSig$chr=="X","X","A"),levels=c("A","X"))
+
+wilcoxt<-wilcox.test(allSig$log2FoldChange[allSig$chr=="X"],allSig$log2FoldChanges[allSig$chr!="X"])
 
 
 p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
@@ -81,8 +85,14 @@ p1<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
   theme(legend.position="none")+
   coord_cartesian(ylim=c(-0.5,0.5)) + scale_fill_grey(start=0.8, end=0.4)+
   geom_hline(yintercept=0,linetype="dashed",col="red")+
-  xlab("Chromosome") +ylab("Log<sub>2</sub>FC")
+  xlab("Chromosome") +ylab("Log<sub>2</sub>FC") #+
+  #geom_signif(y_position=0.49,xmin=NA,xmax=6,annotation="p<2.2%*%10^-16",
+  #            parse=T)
+
 p1
+table(allSig$chr)
+
+
 
 
 ##########-
@@ -136,6 +146,7 @@ ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 10, 2, 2), "mm")))
 
 draw(htlist)
 
+table(geneTable$XvA)
 
 ############### Final assembly #########
 

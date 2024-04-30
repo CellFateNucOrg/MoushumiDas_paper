@@ -77,11 +77,9 @@ for (grp in groupsOI){
   print(grp)
   salmon<-readRDS(paste0(projectDir,"/",fileNamePrefix,contrastsOI[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[!is.na(salmon$padj),]
-  #nrow(filterResults(salmon,padj=0.05,lfc=-0.5,direction="lt",chr="autosomes"))
   print(paste0(nrow(salmon)," genes before filtering"))
   print(paste0(sum(is.na(salmon$padj))," have padj that is NA"))
-  #salmon$expressed<-sum(salmon$baseMean>10)
-  sigTables[[grp]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
+  sigTables[[grp]]<-as.data.frame(salmon)
   print(paste0(nrow(sigTables[[grp]])," genes after automatic threshold filter"))
 }
 
@@ -91,8 +89,6 @@ sig$SMCpretty<-factor(SMC,levels=useContrasts,labels=prettyNames)
 sig$SMC<-factor(SMC,levels=useContrasts)
 table(sig$SMC)
 sig$XvA<-ifelse(sig$chr=="chrX","chrX","Autosomes")
-#sig$XvA[sig$chr=="chrX"]<-"chrX"
-#sig$XvA<-factor(sig$XvA)
 table(sig$XvA,sig$SMC)
 sig$upVdown[sig$log2FoldChange<0]<-"down"
 sig$upVdown[sig$log2FoldChange>0]<-"up"
@@ -207,59 +203,6 @@ p2<-ggplot(allSig,aes(x=chr,y=log2FoldChange,fill=chr)) +
   geom_text(data=facetLabels,aes(label=complexes),parse=T,x=2,y=1.4,size=3.5,
             hjust=0)
 p2
-
-# ##################-
-# ## boxplot LFC up/down significant------
-# ##################-
-# localLFCval<-0
-# sigTables<-list()
-# for (grp in useContrasts){
-#   salmon<-readRDS(paste0(outPath,"/",fileNamePrefix,contrastsOI[[grp]],
-#                          "_DESeq2_fullResults_p",padjVal,".rds"))
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   rownames(salmon)<-NULL
-#   sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
-#                                                       padj=padjVal, lfc=localLFCval,
-#                                                       namePadjCol="padj",
-#                                                       nameLfcCol="log2FoldChange",
-#                                                       direction="both",
-#                                                       chr="all", nameChrCol="chr"))
-# }
-#
-# # upregulated
-# sigList<-lapply(sigTables, getSignificantGenes,
-#                 padj=padjVal,lfc=localLFCval,direction="gt")
-#
-# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-# sigList<-do.call(rbind,sigList)
-# sigList$updown<-"up"
-# sigTbl<-sigList
-#
-#
-# # downregulated
-# sigList<-lapply(sigTables, getSignificantGenes,
-#                 padj= padjVal,lfc= -localLFCval,direction="lt")
-#
-# sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
-# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-# sigList<-do.call(rbind,sigList)
-# sigList$updown<-"down"
-# sigTbl<-rbind(sigTbl,sigList)
-# sigTbl$chr<-as.factor(sigTbl$chr)
-# sigTbl$SMC<-factor(sigTbl$SMC, levels=groupsOI,labels=prettyNames)
-# sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-# rownames(sigTbl)<-NULL
-# sigTbl$XvA<-ifelse(sigTbl$chr=="chrX","chrX","Autosomes")
-#
-# yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-# p2a<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
-#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-#   facet_grid(cols=vars(XvA)) + coord_cartesian(ylim=yminmax) +
-#   ggtitle("Absolute LFC of significantly changed genes by chromosome type") +
-#   theme_minimal() + xlab("")+ ylab("|log2(FC)|")+
-#   scale_fill_brewer(palette="Dark2",labels = ggplot2:::parse_safe(levels(sigTbl$SMC)))
-
 
 
 

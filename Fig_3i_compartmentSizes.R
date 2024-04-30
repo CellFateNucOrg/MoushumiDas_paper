@@ -15,6 +15,7 @@ if(!dir.exists(finalFigDir)){
   dir.create(finalFigDir)
 }
 
+source(paste0(projectDir,"/functions_plotting.R"))
 
 theme_set(
   theme_classic()+
@@ -124,8 +125,10 @@ dfsum$percentIncrease<-100*dfsum$mean/dfsum$mean[dfsum$SMC=="TEV<Br>control"]
 
 
 st<-compare_means(width~SMC,df,group.by=c("AB","XvA"),p.adjust.method="fdr",
-                  method="wilcox.test")
-st$padj.format<-ufs::formatPvalue(st$p.adj,digits=3)
+                  method="wilcox.test") %>% p_format(new.col=T,accuracy=1e-32)
+
+st$html.format<-prettyExponents(st$p.adj.format)
+
 p1a<-ggplot(df,aes(x=SMC,y=width/1e3,fill=AB)) +
   geom_boxplot(outlier.shape=NA,notch=T,varwidth=T,alpha=0.9) +
   scale_fill_manual(values=c("red","lightblue"))+
@@ -136,7 +139,8 @@ p1a<-ggplot(df,aes(x=SMC,y=width/1e3,fill=AB)) +
         legend.position="none")+
   stat_summary(fun="mean",geom="point",shape=4,size=2)+
   geom_segment(x=1,y=91000/1e3,xend=2,yend=91000/1e3,linewidth=0.01)+
-  geom_text(data=st,mapping=aes(x=SMC,y=width,label=padj.format),x=1.5,y=97000/1e3)+
+  geom_text(data=st,mapping=aes(x=SMC,y=width,label=html.format),x=1.5,y=97000/1e3,
+            parse=T)+
   ylab("Domain size (kb)") +
   geom_text(data=dfsum,mapping=aes(label=count),size=2.7)
 
