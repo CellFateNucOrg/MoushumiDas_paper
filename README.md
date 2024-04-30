@@ -1,6 +1,8 @@
 # Mouhsumi Das et al. paper figures
 
 Code and data objects for RNAseq figures from Das _et al._ (2024) **Condensin I folds the Caenorhabditis elegans genome** 
+The pipeline scripts for processing the raw RNAseq reads with Salmon and DESeq2 and other custom scripts can be found at the following repository:
+[SMC_RNAseq](https://github.com/CellFateNucOrg/SMC_RNAseq/tree/v0.2) repository.
 
 ## Main figures
 
@@ -49,4 +51,16 @@ Created using _`Fig_S7_RNAseqTEV_2.R`_ script
 
 ### Figure S9
 Panels F & G Created using _`Fig_S9f&g_RNAseq_sdc3.R`_ script
+
+# DESeq2 results tables
+These can be found in the folder _`p0.05_lfc0.5_filtCycChrAX`_. 
+
+| **Pertubation**                            | **Description** | **Filename**                                                              | 
+|--------------------------------------------|-----------------|-------------------------------------------------------------------------------|
+| SCC-1 cleavage         | Effect of cohesin<sup>SCC-1<\sup>       | _`filtCycChrAX_X.wt.wt.0mM_scc16cs_vs_wt_DESeq2_fullResults_p0.05.rds`_    |
+| COH-1 cleavage         | Effect of Cohesin<sup>COH-1<\sup> cleavage by TEV  | _`filtCycChrAX_X.wt.wt.0mM_coh1cs_vs_wt_DESeq2_fullResults_p0.05.rds`_ |
+| SCC-1 & COH-1 cleavage | cohesin<sup>SCC-1<\sup> and cohesin<sup>COH-1<\sup> cleavage by TEV   | _`filtCycChrAX_X.wt.wt.0mM_scc1coh1cs_vs_wt_DESeq2_fullResults_p0.05.rds`_    |
+| DPY-26 cleavage        | Effect of condensin I/I<sup>DC<\sup> cleavage by TEV      | _`filtCycChrAX_X.wt.wt.0mM_dpy26cs_vs_wt_DESeq2_fullResults_p0.05.rds`_  |
+| KLE-2 cleavage         | Effect of condensinII cleavage by TEV  | _`filtCycChrAX_X.wt.wt.0mM_kle2cs_vs_wt_DESeq2_fullResults_p0.05.rds`_   |
+| SDC-3 degron           | Effect of SDC-3 degradation +-auxin  | _`filtCycChrAX_X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt_DESeq2_fullResults_p0.05.rds`_   |
 
