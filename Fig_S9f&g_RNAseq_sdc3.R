@@ -35,15 +35,13 @@ theme_set(
 )
 
 contrastsOI<-c("wt.TIR1.sdc3deg.X_1mM_vs_0mM",
-               "X.wt.wt.0mM_dpy26cs_vs_wt","X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt")
-useContrasts<-c("aux_sdc3bg","dpy26","sdc3dpy26")
+               "X.wt.wt.0mM_dpy26cs_vs_wt")
+useContrasts<-c("aux_sdc3bg","dpy26")
 
 prettyNames<-c(substitute(italic(x^AID),list(x="sdc-3")),
-               substitute(italic(x^cs),list(x="dpy-26")),
-               substitute(italic(x^AID*y^cs),list(x="sdc-3",y="dpy-26")))
+               substitute(italic(x^cs),list(x="dpy-26"))) # plotmath markdown
 
-prettyNames1<-c("sdc-3^AID","dpy-26^cs","sdc-3^(AID)dpy-26^(cs)")
-prettyNames1<-c("sdc-3<sup>AID</sup>","dpy-26<sup>cs</sup>","sdc-3<sup>AID</sup>dpy-26<sup>cs</sup>")
+prettyNames1<-c("sdc-3<sup>AID</sup>","dpy-26<sup>cs</sup>") #html markdown
 
 names(contrastsOI)<-useContrasts
 
@@ -136,7 +134,7 @@ hm1<-Heatmap(as.matrix(geneTable[geneTable$XvA=="Autosomes",lfcCols]),
 o1 = seriate(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]), method = "PCA")
 hm2<-Heatmap(as.matrix(geneTable[geneTable$XvA=="chrX",lfcCols]),name="NA",
              col=heatmapCol,
-             column_labels=gt_render(prettyNames1[1:2],
+             column_labels=gt_render(prettyNames1,
                                      gp=gpar(fontface="italic",fontsize=10)),
              row_order = rev(get_order(o1,1)),  column_order=1:length(useContrasts[1:2]),
              show_row_names=F,row_title="chrX",column_names_rot = 90,
