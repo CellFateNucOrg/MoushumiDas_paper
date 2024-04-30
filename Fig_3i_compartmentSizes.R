@@ -31,7 +31,6 @@ theme_set(
 )
 
 
-RNAseqPath=paste0(projectDir,"/tracks/2021_RNAseq_MDas")
 
 ##########################-
 # domain sizes -------

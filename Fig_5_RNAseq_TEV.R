@@ -42,10 +42,7 @@ prettyNames<-c(substitute(italic(x^cs),list(x="dpy-26")),
                substitute(italic(x^cs),list(x="scc-1")),
                substitute(italic(x^cs),list(x="coh-1")),
                substitute(italic(x^cs*y^cs),list(x="scc-1",y="coh-1")))
-#plot(1:100,main=prettyNames[[5]])
 
-#prettyNames1<-c("dpy-26^cs","kle-2^cs","scc-1^cs","coh-1^cs","scc-1^(cs)coh-1^cs")
-prettyNames1<-c("dpy-26<sup>cs</sup>","kle-2<sup>cs</sup>","scc-1<sup>cs</sup>","coh-1<sup>cs</sup>","scc-1<sup>cs</sup>coh-1<sup>cs</sup>")
 
 complexes<-c("condensin~I/I^DC", "condensin~II", "cohesin^{SCC-1}","cohesin^{COH-1}","cohesins")
 complexes1<-c("condensin I/I<sup>DC</sup>", "condensin II", "cohesin<sup>SCC-1</sup>",
@@ -285,7 +282,7 @@ table(allContrasts$contrast)
 # Manual clicked loops------
 ##########################-
 
-### new clicked loops
+
 
 ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
 

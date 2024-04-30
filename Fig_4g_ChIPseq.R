@@ -24,7 +24,7 @@ theme_set(
 )
 
 
-hicFeaturePath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
+chipSeqPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/hicFeatures"
 
 
 
@@ -66,7 +66,7 @@ assignInNamespace("getREF",getREF,ns="seqplots")
 
 # DCC subunits and kleisins -----
 
-bwFiles<-paste0(hicFeaturePath,"/publicData/",c("DPY27_N2_L3_GSE67650_ce11.bw", # Kramer et al (2015)
+bwFiles<-paste0(chipSeqPath,"/publicData/",c("DPY27_N2_L3_GSE67650_ce11.bw", # Kramer et al (2015)
  "GSE87741_DPY30_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)
  "GSE87741_SDC2_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)
  "GSE87741_SDC3_N2_MxEmb_MACS141_e5_average_ce11.bw", # Albritton et al (2017)

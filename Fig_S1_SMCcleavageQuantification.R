@@ -79,7 +79,7 @@ p2
 
 # microscopy data ------
 
-microscopyDir<-"/Volumes/external.data/MeisterLab/jsemple/microscopy"
+microscopyDir<-paste0(otherDataDir,"/microscopy")
 dataDirs<-data.frame(dir=c("20230831_941_SMC1GFP_HS","20230907_941-9_SMCGFP1_HS",
                            "20231213_941-9_SMC1GFP_HS"))
 
