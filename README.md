@@ -57,7 +57,7 @@ These can be found in the folder _`p0.05_lfc0.5_filtCycChrAX`_ and are used by t
 
 | **Pertubation**                            | **Description** | **Filename**                                                              | 
 |--------------------------------------------|-----------------|-------------------------------------------------------------------------------|
-| SCC-1 cleavage         | Cohesin<sup>SCC-1</sup>       | _`filtCycChrAX_X.wt.wt.0mM_scc16cs_vs_wt_DESeq2_fullResults_p0.05.rds`_    |
+| SCC-1 cleavage         | Cohesin<sup>SCC-1</sup> cleavage by TEV     | _`filtCycChrAX_X.wt.wt.0mM_scc16cs_vs_wt_DESeq2_fullResults_p0.05.rds`_    |
 | COH-1 cleavage         | Cohesin<sup>COH-1</sup> cleavage by TEV  | _`filtCycChrAX_X.wt.wt.0mM_coh1cs_vs_wt_DESeq2_fullResults_p0.05.rds`_ |
 | SCC-1 & COH-1 cleavage | Cohesin<sup>SCC-1</sup> and cohesin<sup>COH-1</sup> cleavage by TEV   | _`filtCycChrAX_X.wt.wt.0mM_scc1coh1cs_vs_wt_DESeq2_fullResults_p0.05.rds`_    |
 | DPY-26 cleavage        | Condensin I/I<sup>DC</sup> cleavage by TEV      | _`filtCycChrAX_X.wt.wt.0mM_dpy26cs_vs_wt_DESeq2_fullResults_p0.05.rds`_  |
