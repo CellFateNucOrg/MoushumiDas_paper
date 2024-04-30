@@ -5,7 +5,7 @@ Partial code and data objects for figures from Das et al.
 ## Main figures
 
 ### Figure 2
-Panels C & D created with _'Fig_2c&d_eigenVectors.R'_ script
+Panels C & D created with _`Fig_2c&d_eigenVectors.R`_ script
 Chromatin states were taken from Evans et al. (2016, PMID: 27791097) and lifted over to Ce11
 
 ### Figure 3
