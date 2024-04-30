@@ -4,6 +4,9 @@ Code and data objects for RNAseq figures from Das _et al._ (2024) **Condensin I 
 The pipeline scripts for processing the raw RNAseq reads with Salmon and DESeq2 and other custom scripts can be found at the following repository:
 [SMC_RNAseq](https://github.com/CellFateNucOrg/SMC_RNAseq/tree/v0.2) repository.
 
+Old version: https://www.biorxiv.org/content/10.1101/2022.06.14.495661v2
+Published version: 
+
 ## Main figures
 
 ### Figure 2
