@@ -53,7 +53,7 @@ Created using _`Fig_S7_RNAseqTEV_2.R`_ script
 Panels F & G Created using _`Fig_S9f&g_RNAseq_sdc3.R`_ script
 
 # DESeq2 results tables
-These can be found in the folder _`p0.05_lfc0.5_filtCycChrAX`_. 
+These can be found in the folder _`p0.05_lfc0.5_filtCycChrAX`_ and are used by the scripts.
 
 | **Pertubation**                            | **Description** | **Filename**                                                              | 
 |--------------------------------------------|-----------------|-------------------------------------------------------------------------------|
