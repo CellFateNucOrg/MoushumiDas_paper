@@ -36,7 +36,7 @@ Figure of kleisin subunit cleavage RNAseq and SDC-3AID RNAseq were created with 
 ### Figure S1
 Panel A quantification was carried out in imageJ using the Analyze>Gels tools to select lanes and plot intensity profile. Lines were drawn at the base of peaks to subtract local background and the area of the peak was recorded. Plots of quantification created with _`Fig_S1_SMCcleavageQuantification.R`_ script.
 
-Panel D quantification was carried out with scripts in imageProcessingScripts folder. Images were denoised with noise2void alogorithm using the _`00_trainModel_n2v.sh`_ _`trainN2Vmodel.py`_ _`01_denoise_n2v.sh`_ and _`n2vDenoiseWithTrainedModel.py`_ scripts.  The ImageJ script _`Macro_rotated_cropped_mask.ijm`_ was used to rotate and crop images of head, and manually click the outline of the head and a background region to create masks. The _`quantifySMC1_head_cropped.ipynb`_ python notebook was used to quantify the signal from the original raw image using the masks of the head and background. 
+Panel D quantification was carried out with scripts in imageProcessingScripts folder. Images were denoised with noise2void alogorithm using the _`00_trainModel_n2v.sh`_ _`trainN2Vmodel.py`_ _`01_denoise_n2v.sh`_ and _`n2vDenoiseWithTrainedModel.py`_ scripts.  The ImageJ script _`Macro_rotated_cropped_mask.ijm`_ was used to z-project, rotate and crop images of head, and manually click the outline of the head and a background region to create masks. The _`quantifySMC1_head_cropped.ipynb`_ python notebook was used to quantify the signal from the original raw image using the masks of the head and background. 
 
 ### Figure S2
 Panel B created with _`Fig_S2b_eigenVectors.R`_ scripts
