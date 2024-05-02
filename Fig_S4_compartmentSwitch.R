@@ -661,7 +661,20 @@ dev.off()
 
 
 #  explanatory figure S4 ------
-refset=refPCAs[1]
+pcas<-data.frame(SMC=c("TEVonly","dpy26"),
+                 strain =c("366","382"),
+                 E1=NA, E2=NA)
+E1files=list.files(otherDataDir,
+                   pattern="_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E1\\.rds")
+E2files=list.files(otherDataDir,
+                   pattern="_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E2\\.rds")
+pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E1\\.rds")))]
+pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_10k\\.oriented\\.3quantiles_trans\\.eigs\\.vecs_E2\\.rds")))]
+
+refset="TEVonly"
+otherPCAs<-c("dpy26")
+prettyOtherPCAs<-c("dpy-26cs")
+
 ref1<-readRDS(paste0(otherDataDir,"/",pcas$E1[pcas$SMC==refset]))
 ref2<-readRDS(paste0(otherDataDir,"/",pcas$E2[pcas$SMC==refset]))
 
