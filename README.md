@@ -49,8 +49,8 @@ Created using _`Fig_S4_compartmentSwitch.R`_ script
 ### Figure S6
 Created using _`Fig_S6_RNAseqTEV.R`_ script
 
-### Figure S7
-Created using _`Fig_S7_RNAseqTEV_2.R`_ script
+### Figure S8
+Created using _`Fig_S8_RNAseqTEV_2.R`_ script
 
 ### Figure S9
 Panels F & G Created using _`Fig_S9f&g_RNAseq_sdc3.R`_ script
