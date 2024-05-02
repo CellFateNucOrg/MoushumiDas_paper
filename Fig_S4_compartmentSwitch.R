@@ -444,13 +444,13 @@ doEigenComplexHeatmap1<-function(pca, pcaName, doRaster=T){
 ## chromatin switch count table------
 ####################-
 
-pcas<-data.frame(SMC=c("TEVonly","dpy26"),
-                 strain =c("366","382"),
+pcas<-data.frame(SMC=c("TEVonly","dpy26","kle2","scc1","coh1"),
+                 strain =c("366","382","775","784","828"),
                  E1=NA, E2=NA)
 
 refPCAs<-c("TEVonly")
-otherPCAs<-c("dpy26")
-prettyOtherPCAs<-c("dpy-26cs")
+otherPCAs<-c("dpy26","kle2","scc1","coh1")
+prettyOtherPCAs<-c("dpy-26cs","kle-2cs","scc-1cs","coh-1cs")
 
 
 E1files=list.files(otherDataDir,

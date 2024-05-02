@@ -208,7 +208,7 @@ ph1<-grid::grid.grabExpr(draw(htlist,padding= unit(c(2, 5, 2, 5), "mm")))
 grid.draw(ph1)
 
 table(geneTable$XvA)
-
+dim(geneTable)
 
 
 ##################-

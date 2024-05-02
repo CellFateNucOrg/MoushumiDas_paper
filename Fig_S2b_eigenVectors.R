@@ -129,7 +129,7 @@ pcas<-data.frame(SMC=c("wt","TEVonly"),
                  strain =c("N2","366"),
                  E1=NA, E2=NA)
 
-tpm366<-import(paste0(projectDir,"/otherData/PMW366_TPM_avr.bedgraph"),
+tpm366<-import(paste0(projectDir,"/tracks/2021_RNAseq_MDas/PMW366_TPM_avr.bedgraph"),
                format="bedgraph")
 
 cov366<-coverage(tpm366,weight="score")
