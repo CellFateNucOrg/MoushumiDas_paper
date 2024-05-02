@@ -381,9 +381,9 @@ p3
 
 
 p<-ggarrange(p1,p2,p3,nrow=3,heights=c(1,1.2,1),labels=c("a ","b ","c "))
-p<-annotate_figure(p, top = text_grob("Das et al., Figure S7", size = 12))
-ggsave(paste0(finalFigDir,"/Fig_S7_RNAseqTEV_2.pdf"),p,device="pdf",width=21,height=29.7,
+p<-annotate_figure(p, top = text_grob("Das et al., Figure S8", size = 12))
+ggsave(paste0(finalFigDir,"/Fig_S8_RNAseqTEV_2.pdf"),p,device="pdf",width=21,height=29.7,
        unit="cm")
-ggsave(paste0(finalFigDir,"/Fig_S7_RNAseqTEV_2.png"),p,device="png",width=21,height=29.7,
+ggsave(paste0(finalFigDir,"/Fig_S8_RNAseqTEV_2.png"),p,device="png",width=21,height=29.7,
        unit="cm",bg="white")
 
